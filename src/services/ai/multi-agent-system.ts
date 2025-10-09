@@ -2,6 +2,15 @@
 import OpenAI from 'openai';
 import { imageGenerationService } from '@/services/media/image-generation.service';
 
+// Import condicional do video service para evitar erros se não existir
+let videoGenerationService: any;
+try {
+  videoGenerationService = require('@/services/media/video-generation.service').videoGenerationService;
+} catch (e) {
+  console.warn('Video generation service não encontrado, vídeos serão desativados');
+  videoGenerationService = null;
+}
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
@@ -332,63 +341,125 @@ JSON:
 }
 
 // ==========================
-// 5. MEDIA AGENT (NOVO!)
+// 5. MEDIA AGENT (Com Vídeos)
 // ==========================
 class MediaAgent {
-  private systemPrompt = `Tu és o Media Agent, especialista em geração de mídia visual.
-Transformas ideias em imagens impactantes usando IA.`;
+  private systemPrompt = `Tu és o Media Agent, especialista em geração de mídia visual e vídeo.
+Transformas ideias em imagens e vídeos impactantes usando IA de última geração.`;
 
-  async generateImagesForPosts(posts: any[]): Promise<any[]> {
-    console.log(`🎨 Media Agent: A gerar imagens para ${posts.length} posts...`);
+  async generateMediaForPosts(posts: any[]): Promise<any[]> {
+    console.log(`🎨 Media Agent: A gerar mídia para ${posts.length} posts...`);
     
-    const postsWithImages = [];
+    const postsWithMedia = [];
 
     for (let i = 0; i < posts.length; i++) {
       const post = posts[i];
-      console.log(`🖼️ Gerando imagem ${i + 1}/${posts.length}: ${post.hook}`);
+      
+      // Decidir se é imagem ou vídeo baseado no tipo
+      const shouldGenerateVideo = this.shouldBeVideo(post.type, i);
+      
+      if (shouldGenerateVideo && videoGenerationService) {
+        console.log(`🎬 Gerando VÍDEO ${i + 1}/${posts.length}: ${post.hook}`);
+        const videoPost = await this.generateVideoPost(post);
+        postsWithMedia.push(videoPost);
+      } else {
+        console.log(`🖼️ Gerando IMAGEM ${i + 1}/${posts.length}: ${post.hook}`);
+        const imagePost = await this.generateImagePost(post);
+        postsWithMedia.push(imagePost);
+      }
 
-      try {
-        // Determinar estilo baseado no tipo
-        const styleMap: Record<string, string> = {
-          educational: 'professional',
-          viral: 'vibrant',
-          sales: 'professional',
-        };
-        const style = styleMap[post.type] || 'professional';
-
-        // Gerar imagem
-        const imageUrl = await imageGenerationService.generateImage({
-          prompt: post.imagePrompt || `Professional social media post about: ${post.hook}. Modern, clean design.`,
-          style: style as any,
-          aspectRatio: '1:1',
-        });
-
-        postsWithImages.push({
-          ...post,
-          imageUrl,
-          format: 'SINGLE',
-        });
-
-        console.log(`✅ Imagem gerada: ${post.hook}`);
-
-        // Delay para evitar rate limits
-        if (i < posts.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 2000));
-        }
-      } catch (error) {
-        console.error(`❌ Erro ao gerar imagem para post ${i + 1}:`, error);
-        
-        // Usar placeholder em caso de erro
-        postsWithImages.push({
-          ...post,
-          imageUrl: `https://via.placeholder.com/1080x1080/3B82F6/FFFFFF?text=Post+${i + 1}`,
-          format: 'SINGLE',
-        });
+      // Delay para evitar rate limits
+      if (i < posts.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
       }
     }
 
-    console.log(`✅ Media Agent: ${postsWithImages.length} imagens geradas com sucesso!`);
-    return postsWithImages;
+    console.log(`✅ Media Agent: ${postsWithMedia.length} mídias geradas!`);
+    return postsWithMedia;
+  }
+
+  // Decidir se post deve ser vídeo (1 em cada 3 posts é vídeo)
+  private shouldBeVideo(postType: string, index: number): boolean {
+    // Se não tiver video service, nunca gera vídeo
+    if (!videoGenerationService) return false;
+    
+    // Viral posts têm mais chance de ser vídeo
+    if (postType === 'viral' && index === 1) return true;
+    
+    // Um post educativo pode ser reel explicativo
+    if (postType === 'educational' && Math.random() > 0.7) return true;
+    
+    return false;
+  }
+
+  // Gerar post com imagem
+  private async generateImagePost(post: any): Promise<any> {
+    try {
+      const styleMap: Record<string, string> = {
+        educational: 'professional',
+        viral: 'vibrant',
+        sales: 'professional',
+      };
+      const style = styleMap[post.type] || 'professional';
+
+      const imageUrl = await imageGenerationService.generateImage({
+        prompt: post.imagePrompt || `Professional social media post about: ${post.hook}. Modern, clean design.`,
+        style: style as any,
+        aspectRatio: '1:1',
+      });
+
+      console.log(`✅ Imagem gerada: ${post.hook}`);
+
+      return {
+        ...post,
+        imageUrl,
+        format: 'SINGLE',
+      };
+    } catch (error) {
+      console.error(`❌ Erro ao gerar imagem:`, error);
+      
+      return {
+        ...post,
+        imageUrl: `https://via.placeholder.com/1080x1080/3B82F6/FFFFFF?text=Post`,
+        format: 'SINGLE',
+      };
+    }
+  }
+
+  // Gerar post com vídeo profissional
+  private async generateVideoPost(post: any): Promise<any> {
+    try {
+      const styleMap: Record<string, string> = {
+        educational: 'professional',
+        viral: 'dynamic',
+        sales: 'cinematic',
+      };
+      const style = styleMap[post.type] || 'cinematic';
+
+      const videoResult = await videoGenerationService.generateProfessionalVideo({
+        script: post.videoScript || post.caption,
+        duration: 10,
+        style: style as any,
+        aspectRatio: '9:16',
+        quality: 'high'
+      });
+
+      console.log(`✅ Vídeo gerado com ${videoResult.provider}: ${post.hook}`);
+
+      return {
+        ...post,
+        format: 'REEL',
+        videoUrl: videoResult.videoUrl,
+        thumbnailUrl: videoResult.thumbnailUrl,
+        duration: videoResult.duration,
+        videoProvider: videoResult.provider,
+      };
+    } catch (error) {
+      console.error(`❌ Erro ao gerar vídeo, usando imagem:`, error);
+      
+      // Fallback para imagem se vídeo falhar
+      return await this.generateImagePost(post);
+    }
   }
 }
 
@@ -400,14 +471,14 @@ export class AIOrchestrator {
   private contentAgent: ContentAgent;
   private analysisAgent: AnalysisAgent;
   private schedulingAgent: SchedulingAgent;
-  private mediaAgent: MediaAgent; // NOVO!
+  private mediaAgent: MediaAgent;
 
   constructor() {
     this.strategyAgent = new StrategyAgent();
     this.contentAgent = new ContentAgent();
     this.analysisAgent = new AnalysisAgent();
     this.schedulingAgent = new SchedulingAgent();
-    this.mediaAgent = new MediaAgent(); // NOVO!
+    this.mediaAgent = new MediaAgent();
   }
 
   async processOnboarding(data: OnboardingData) {
@@ -424,9 +495,9 @@ export class AIOrchestrator {
       this.contentAgent.generateContentIdeas(data, 10),
     ]);
 
-    // Fase 3: Media Agent gera imagens para os posts (NOVO!)
-    console.log('🎨 Media Agent a gerar imagens...');
-    const postsWithImages = await this.mediaAgent.generateImagesForPosts(
+    // Fase 3: Media Agent gera imagens E VÍDEOS para os posts
+    console.log('🎨 Media Agent a gerar mídia (imagens + vídeos)...');
+    const postsWithMedia = await this.mediaAgent.generateMediaForPosts(
       initialPosts.result.posts
     );
 
@@ -451,11 +522,12 @@ export class AIOrchestrator {
 
     console.log('✅ Multi-Agent System concluído!');
     console.log(`💰 Tokens totais usados: ${totalTokens}`);
-    console.log(`🖼️ Posts com imagens: ${postsWithImages.length}`);
+    console.log(`🖼️ Posts com mídia: ${postsWithMedia.length}`);
+    console.log(`🎬 Vídeos gerados: ${postsWithMedia.filter(p => p.format === 'REEL').length}`);
 
     return {
       strategy: strategy.result,
-      initialPosts: postsWithImages, // AGORA COM IMAGENS!
+      initialPosts: postsWithMedia, // COM IMAGENS E VÍDEOS!
       contentIdeas: contentIdeas.result.ideas,
       profileAnalysis: profileAnalysis.result,
       weeklyCalendar: calendar.result,
@@ -466,7 +538,7 @@ export class AIOrchestrator {
         agents: [
           strategy.agent,
           initialPosts.agent,
-          'MediaAgent', // NOVO!
+          'MediaAgent',
           contentIdeas.agent,
           profileAnalysis.agent,
           calendar.agent,

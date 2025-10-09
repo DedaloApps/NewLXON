@@ -1,5 +1,6 @@
 // src/services/ai/multi-agent-system.ts
 import OpenAI from 'openai';
+import { imageGenerationService } from '@/services/media/image-generation.service';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -31,8 +32,6 @@ A tua única função é analisar o perfil do utilizador e criar uma estratégia
 Pensas como um estratega de marketing sénior com 10+ anos de experiência.`;
 
   async createStrategy(data: OnboardingData): Promise<AgentResponse<any>> {
-    const startTokens = 0;
-
     const prompt = `Cria uma estratégia de conteúdo completa para:
     
 Negócio: ${data.niche}
@@ -270,12 +269,11 @@ Optimizas quando publicar baseado em audiência, algoritmo e comportamento.`;
     strategy: any,
     contentIdeas: any
   ): Promise<AgentResponse<any>> {
-    // Calcular frequência baseada no autoPosting
     const frequencyMap: any = {
-      auto_daily: 7,
-      auto_3x: 3,
-      manual_approve: 5,
-      manual_only: 3,
+      full_auto: 7,
+      semi_auto: 5,
+      creative_assist: 3,
+      strategy_only: 0,
     };
     const postsPerWeek = frequencyMap[data.autoPosting] || 3;
 
@@ -334,6 +332,67 @@ JSON:
 }
 
 // ==========================
+// 5. MEDIA AGENT (NOVO!)
+// ==========================
+class MediaAgent {
+  private systemPrompt = `Tu és o Media Agent, especialista em geração de mídia visual.
+Transformas ideias em imagens impactantes usando IA.`;
+
+  async generateImagesForPosts(posts: any[]): Promise<any[]> {
+    console.log(`🎨 Media Agent: A gerar imagens para ${posts.length} posts...`);
+    
+    const postsWithImages = [];
+
+    for (let i = 0; i < posts.length; i++) {
+      const post = posts[i];
+      console.log(`🖼️ Gerando imagem ${i + 1}/${posts.length}: ${post.hook}`);
+
+      try {
+        // Determinar estilo baseado no tipo
+        const styleMap: Record<string, string> = {
+          educational: 'professional',
+          viral: 'vibrant',
+          sales: 'professional',
+        };
+        const style = styleMap[post.type] || 'professional';
+
+        // Gerar imagem
+        const imageUrl = await imageGenerationService.generateImage({
+          prompt: post.imagePrompt || `Professional social media post about: ${post.hook}. Modern, clean design.`,
+          style: style as any,
+          aspectRatio: '1:1',
+        });
+
+        postsWithImages.push({
+          ...post,
+          imageUrl,
+          format: 'SINGLE',
+        });
+
+        console.log(`✅ Imagem gerada: ${post.hook}`);
+
+        // Delay para evitar rate limits
+        if (i < posts.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+      } catch (error) {
+        console.error(`❌ Erro ao gerar imagem para post ${i + 1}:`, error);
+        
+        // Usar placeholder em caso de erro
+        postsWithImages.push({
+          ...post,
+          imageUrl: `https://via.placeholder.com/1080x1080/3B82F6/FFFFFF?text=Post+${i + 1}`,
+          format: 'SINGLE',
+        });
+      }
+    }
+
+    console.log(`✅ Media Agent: ${postsWithImages.length} imagens geradas com sucesso!`);
+    return postsWithImages;
+  }
+}
+
+// ==========================
 // ORCHESTRATOR - Coordena todos os agentes
 // ==========================
 export class AIOrchestrator {
@@ -341,12 +400,14 @@ export class AIOrchestrator {
   private contentAgent: ContentAgent;
   private analysisAgent: AnalysisAgent;
   private schedulingAgent: SchedulingAgent;
+  private mediaAgent: MediaAgent; // NOVO!
 
   constructor() {
     this.strategyAgent = new StrategyAgent();
     this.contentAgent = new ContentAgent();
     this.analysisAgent = new AnalysisAgent();
     this.schedulingAgent = new SchedulingAgent();
+    this.mediaAgent = new MediaAgent(); // NOVO!
   }
 
   async processOnboarding(data: OnboardingData) {
@@ -363,11 +424,17 @@ export class AIOrchestrator {
       this.contentAgent.generateContentIdeas(data, 10),
     ]);
 
-    // Fase 3: Analysis Agent analisa perfil ideal
+    // Fase 3: Media Agent gera imagens para os posts (NOVO!)
+    console.log('🎨 Media Agent a gerar imagens...');
+    const postsWithImages = await this.mediaAgent.generateImagesForPosts(
+      initialPosts.result.posts
+    );
+
+    // Fase 4: Analysis Agent analisa perfil ideal
     console.log('🔍 Analysis Agent a analisar...');
     const profileAnalysis = await this.analysisAgent.analyzePerfectProfile(data);
 
-    // Fase 4: Scheduling Agent cria calendário
+    // Fase 5: Scheduling Agent cria calendário
     console.log('📅 Scheduling Agent a criar calendário...');
     const calendar = await this.schedulingAgent.createWeeklyCalendar(
       data,
@@ -384,20 +451,22 @@ export class AIOrchestrator {
 
     console.log('✅ Multi-Agent System concluído!');
     console.log(`💰 Tokens totais usados: ${totalTokens}`);
+    console.log(`🖼️ Posts com imagens: ${postsWithImages.length}`);
 
     return {
       strategy: strategy.result,
-      initialPosts: initialPosts.result.posts,
+      initialPosts: postsWithImages, // AGORA COM IMAGENS!
       contentIdeas: contentIdeas.result.ideas,
       profileAnalysis: profileAnalysis.result,
       weeklyCalendar: calendar.result,
       metadata: {
         totalTokens,
-        cost: (totalTokens / 1000) * 0.01, // Aproximado
+        cost: (totalTokens / 1000) * 0.01,
         processingTime: new Date(),
         agents: [
           strategy.agent,
           initialPosts.agent,
+          'MediaAgent', // NOVO!
           contentIdeas.agent,
           profileAnalysis.agent,
           calendar.agent,

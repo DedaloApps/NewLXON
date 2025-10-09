@@ -4,7 +4,6 @@ import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/db";
 import { AIOrchestrator } from "@/services/ai/multi-agent-system";
 import { instagramAnalysisService } from "@/services/instagram/analysis.service";
-import { imageGenerationService } from "@/services/media/image-generation.service";
 import { z } from "zod";
 
 const onboardingSchema = z.object({
@@ -95,15 +94,13 @@ export async function POST(req: NextRequest) {
         }
       } catch (error) {
         console.error("Erro na análise do Instagram (continuando sem ela):", error);
-        // Não falhar o onboarding se a análise do Instagram falhar
       }
     }
 
-    // Iniciar Multi-Agent System
+    // Iniciar Multi-Agent System (JÁ COM GERAÇÃO DE IMAGENS INTEGRADA!)
     console.log("🤖 Iniciando Multi-Agent System...");
     const orchestrator = new AIOrchestrator();
     
-    // Adaptar dados para o formato que os agentes esperam
     const agentData = {
       niche: `${validatedData.business} - ${validatedData.businessDescription}`,
       objective: validatedData.objective,
@@ -114,6 +111,7 @@ export async function POST(req: NextRequest) {
       audienceDetails: validatedData.audienceDetails,
     };
 
+    // O orchestrator agora já retorna posts COM imagens!
     const result = await orchestrator.processOnboarding(agentData);
 
     // Guardar na base de dados
@@ -130,7 +128,7 @@ export async function POST(req: NextRequest) {
         instagramReport: instagramReport ? JSON.stringify(instagramReport) : null,
         instagramScore: instagramScore,
         strategy: JSON.stringify(result.strategy),
-        initialPosts: JSON.stringify(result.initialPosts),
+        initialPosts: JSON.stringify(result.initialPosts), // JÁ COM IMAGENS!
         contentIdeas: JSON.stringify(result.contentIdeas),
         profileAnalysis: JSON.stringify(result.profileAnalysis),
         weeklyCalendar: JSON.stringify(result.weeklyCalendar),
@@ -138,6 +136,8 @@ export async function POST(req: NextRequest) {
         generationCost: result.metadata.cost,
       },
     });
+
+    console.log("✅ Onboarding completo e guardado na BD!");
 
     return NextResponse.json({
       success: true,

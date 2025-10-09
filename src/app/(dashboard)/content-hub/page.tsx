@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from 'react';
-import { Calendar as CalendarIcon, Grid, Instagram, Clock, TrendingUp, Eye, Edit, Trash2, Copy, Send } from 'lucide-react';
+import { Calendar as CalendarIcon, Grid, Instagram, Clock, TrendingUp, Eye, Edit, Trash2, Copy, Send, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';

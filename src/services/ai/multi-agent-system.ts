@@ -104,46 +104,117 @@ Retorna JSON com:
   }
 }
 
+// ADICIONAR ao multi-agent-system.ts (ANTES do ContentAgent)
+
 // ==========================
-// 2. CONTENT AGENT
+// 1.5 MARKETING STRATEGIST AGENT (NOVO!)
 // ==========================
-class ContentAgent {
-  private systemPrompt = `Tu és o Content Agent, mestre em criar conteúdo viral e envolvente.
-Especializas-te em escrever captions que geram engagement, usando storytelling e psicologia.
-Nunca crias conteúdo genérico - tudo é personalizado e estratégico.`;
+class MarketingStrategistAgent {
+  private systemPrompt = `És o Marketing Strategist Agent, um EXPERT em marketing digital e copywriting com PhD em Psicologia do Consumidor.
 
-  async generateInitialPosts(
-    data: OnboardingData,
-    strategy: any
-  ): Promise<AgentResponse<any>> {
-    const prompt = `Cria 3 posts iniciais COMPLETOS para começar:
+ESPECIALIDADES:
+- Copywriting persuasivo baseado em neurociência
+- Storytelling que converte
+- Gatilhos mentais (escassez, autoridade, prova social, reciprocidade)
+- Frameworks AIDA, PAS, PASTOR
+- Psicologia de cores e emoções
+- Análise de comportamento do consumidor
+- Estratégias virais e growth hacking
+- Social proof e FOMO
 
-Contexto:
-- Nicho: ${data.niche}
-- Objetivo: ${data.objective}
-- Tom: ${data.tone}
-- Plataforma principal: ${data.platforms[0]}
-- Pilares de conteúdo: ${strategy.contentPillars.map((p: any) => p.name).join(', ')}
+REGRAS CRÍTICAS DE LINGUAGEM:
+- SEMPRE usar PT-PT (português de Portugal)
+- NUNCA usar "você" - usar "tu", "vós" ou evitar pronome direto
+- Usar "és", "tens", "estás" (não "você é", "você tem")
+- Frases naturais como português falado em Portugal
+- Tom adequado ao público português
 
-Cria:
-1. Um post EDUCATIVO (ensina algo valioso)
-2. Um post VIRAL (entretenimento/relatable)
-3. Um post de VENDAS/CTA (converte)
+REGRAS DE COPYWRITING:
+1. Primeira frase DEVE captar atenção (pattern interrupt)
+2. Contar história que gera emoção
+3. Usar gatilhos mentais comprovados
+4. CTA claro e acionável
+5. Criar FOMO ou urgência quando apropriado
+6. Prova social quando relevante
+7. Fazer perguntas que envolvem o leitor
+8. Criar identificação ("Já te aconteceu...")
 
-Formato JSON:
+CONHECIMENTO DE MERCADO:
+- Conheces profundamente todos os nichos
+- Sabes exatamente o que funciona em cada mercado
+- Aplicas estudos de comportamento do consumidor
+- Usas dados de performance de milhares de posts
+- Adaptas estratégia ao objetivo (venda vs. engagement vs. educação)`;
+
+  async createStrategicContent(
+    postType: string,
+    niche: string,
+    objective: string,
+    audience: string,
+    tone: string,
+    contentPillars: any[]
+  ): Promise<{
+    hook: string;
+    caption: string;
+    cta: string;
+    strategy: {
+      triggers: string[];
+      framework: string;
+      emotionalTone: string;
+      expectedEngagement: string;
+      reasoning: string;
+    };
+  }> {
+    const prompt = `Cria copy MATADOR para um post de ${postType} em PT-PT:
+
+CONTEXTO DO NEGÓCIO:
+- Nicho: ${niche}
+- Objetivo principal: ${objective}
+- Público-alvo: ${audience}
+- Tom de voz: ${tone}
+- Pilares de conteúdo: ${contentPillars.map((p: any) => p.name).join(', ')}
+
+TIPO DE POST: ${postType}
+${postType === 'educational' ? '→ Ensinar algo valioso que gere confiança e autoridade' : ''}
+${postType === 'viral' ? '→ Criar identificação máxima, entretenimento, partilhável' : ''}
+${postType === 'sales' ? '→ Converter em ação (venda, lead, agendamento)' : ''}
+
+ESTRATÉGIA REQUERIDA:
+1. Identifica os 3 gatilhos mentais mais eficazes para este caso
+2. Escolhe o framework de copywriting ideal (AIDA/PAS/PASTOR)
+3. Define o tom emocional (inspiração/urgência/curiosidade/identificação)
+4. Aplica técnicas de storytelling se relevante
+5. Cria urgência ou FOMO quando apropriado
+
+CRÍTICO - LINGUAGEM PT-PT:
+- NUNCA "você" → usar "tu" ou reformular
+- Exemplos corretos:
+  ✅ "Já te aconteceu isto?"
+  ✅ "Sabias que..."
+  ✅ "Se és como a maioria das pessoas..."
+  ✅ "Podes fazer isto hoje mesmo"
+- Evitar:
+  ❌ "Você sabia"
+  ❌ "Você pode"
+  ❌ "Você está"
+
+ESTRUTURA DO POST:
+1. HOOK (primeira linha): Parar scroll, gerar curiosidade, criar urgência
+2. CORPO: História/ensinamento/identificação com estrutura estratégica
+3. CTA: Claro, específico, acionável
+
+Retorna JSON:
 {
-  "posts": [
-    {
-      "type": "educational",
-      "hook": "Frase de abertura impactante",
-      "caption": "Caption completa com storytelling",
-      "hashtags": ["#tag1", "#tag2", "#tag3"],
-      "cta": "Call to action",
-      "imagePrompt": "Descrição detalhada para gerar imagem com IA",
-      "estimatedEngagement": "alto/médio/baixo",
-      "bestTimeToPost": "09:00"
-    }
-  ]
+  "hook": "Primeira linha MATADORA que para o scroll",
+  "caption": "Corpo completo do post em PT-PT com storytelling e gatilhos",
+  "cta": "Call to action claro e específico",
+  "strategy": {
+    "triggers": ["gatilho 1", "gatilho 2", "gatilho 3"],
+    "framework": "AIDA/PAS/PASTOR",
+    "emotionalTone": "emoção principal",
+    "expectedEngagement": "alto/médio/baixo + porquê",
+    "reasoning": "Explicação da estratégia aplicada"
+  }
 }`;
 
     const completion = await openai.chat.completions.create({
@@ -152,16 +223,234 @@ Formato JSON:
         { role: 'system', content: this.systemPrompt },
         { role: 'user', content: prompt },
       ],
-      temperature: 0.8,
+      temperature: 0.85, // Criatividade alta mas controlada
       response_format: { type: 'json_object' },
     });
 
+    const result = JSON.parse(completion.choices[0].message.content || '{}');
+    return result;
+  }
+
+  /**
+   * Analisa nichos e retorna insights de mercado
+   */
+  async analyzeNicheStrategy(niche: string): Promise<{
+    topPerformingAngles: string[];
+    avoidContent: string[];
+    bestPractices: string[];
+    psychologicalTriggers: string[];
+  }> {
+    const prompt = `Como expert em marketing, analisa o nicho "${niche}" e retorna insights:
+
+Baseado em milhares de posts analisados neste nicho, identifica:
+
+1. **Top 3 ângulos que mais performam** (tipos de conteúdo que geram mais engagement)
+2. **O que evitar** (erros comuns que matam engagement)
+3. **Best practices específicas** do nicho
+4. **Gatilhos psicológicos** mais eficazes para este público
+
+Retorna JSON:
+{
+  "topPerformingAngles": ["ângulo 1 + porquê funciona", "ângulo 2 + porquê", "ângulo 3 + porquê"],
+  "avoidContent": ["erro 1", "erro 2", "erro 3"],
+  "bestPractices": ["prática 1", "prática 2", "prática 3"],
+  "psychologicalTriggers": ["trigger 1 + como usar", "trigger 2 + como usar", "trigger 3 + como usar"]
+}`;
+
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4-turbo-preview',
+      messages: [
+        { role: 'system', content: this.systemPrompt },
+        { role: 'user', content: prompt },
+      ],
+      temperature: 0.7,
+      response_format: { type: 'json_object' },
+    });
+
+    return JSON.parse(completion.choices[0].message.content || '{}');
+  }
+}
+
+// ==========================
+// 2. CONTENT AGENT ATUALIZADO (Substituir o existente)
+// ==========================
+class ContentAgent {
+  private systemPrompt = `Tu és o Content Agent, executor de conteúdo de elite.
+Trabalhas em conjunto com o Marketing Strategist Agent.
+Crias imagePrompts realistas e formatação final de posts.
+
+RESPONSABILIDADES:
+- Criar imagePrompts fotográficos e realistas
+- Formatar hashtags estrategicamente
+- Definir melhor horário de publicação
+- Adicionar emojis quando apropriado
+- Estruturar post para máximo impacto visual
+
+REGRAS DE IMAGEM:
+- Sempre descrever como FOTOGRAFIA PROFISSIONAL
+- Se pessoas: "real person, natural features, authentic moment"
+- Ambientes específicos e reais
+- Iluminação natural
+- Zero menções a ilustração/design/gráfico`;
+
+  async generateInitialPosts(
+    data: OnboardingData,
+    strategy: any,
+    marketingStrategist: MarketingStrategistAgent
+  ): Promise<AgentResponse<any>> {
+    console.log('🎯 Marketing Strategist a criar estratégia de copy...');
+    
+    // Primeiro, o Marketing Strategist analisa o nicho
+    const nicheInsights = await marketingStrategist.analyzeNicheStrategy(data.niche);
+    console.log('📊 Insights de mercado obtidos:', nicheInsights.topPerformingAngles);
+
+    // Criar 3 posts com estratégia profissional
+    const postTypes = ['educational', 'viral', 'sales'];
+    const posts = [];
+
+    for (const type of postTypes) {
+      console.log(`✍️ Criando post ${type}...`);
+      
+      // Marketing Strategist cria o copy estratégico
+      const strategicCopy = await marketingStrategist.createStrategicContent(
+        type,
+        data.niche,
+        data.objective,
+        data.audience || 'público geral',
+        data.tone,
+        strategy.contentPillars
+      );
+
+      // Content Agent complementa com imagem e hashtags
+      const imagePrompt = await this.createRealisticImagePrompt(
+        type,
+        strategicCopy.hook,
+        data.niche
+      );
+
+      const hashtags = this.selectStrategicHashtags(
+        type,
+        data.niche,
+        strategy.hashtagStrategy
+      );
+
+      posts.push({
+        type,
+        hook: strategicCopy.hook,
+        caption: strategicCopy.caption,
+        cta: strategicCopy.cta,
+        imagePrompt,
+        hashtags,
+        strategy: strategicCopy.strategy,
+        estimatedEngagement: strategicCopy.strategy.expectedEngagement,
+        bestTimeToPost: this.getBestTimeForType(type, strategy.postingSchedule),
+      });
+
+      // Delay entre gerações
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+
     return {
       agent: 'ContentAgent',
-      result: JSON.parse(completion.choices[0].message.content || '{}'),
-      tokensUsed: completion.usage?.total_tokens || 0,
+      result: {
+        posts,
+        nicheInsights,
+      },
+      tokensUsed: 0, // Calcular depois
       timestamp: new Date(),
     };
+  }
+
+  private async createRealisticImagePrompt(
+    postType: string,
+    hook: string,
+    niche: string
+  ): Promise<string> {
+    // Contexto específico por tipo de post
+    const contexts: Record<string, string> = {
+      educational: 'professional setting, instructional moment, clear demonstration',
+      viral: 'relatable situation, authentic moment, behind-the-scenes feel',
+      sales: 'professional environment, trustworthy setting, high-end quality',
+    };
+
+    // Base do prompt sempre realista
+    const basePrompt = `Professional DSLR photograph shot on Canon EOS R5, 85mm f/1.8 lens, natural lighting, photojournalistic style.`;
+    
+    // Contexto do nicho
+    const nicheContext = this.getNichePhotoContext(niche);
+    
+    // Contexto do tipo de post
+    const typeContext = contexts[postType] || contexts.educational;
+
+    // Descrição baseada no hook
+    const sceneDescription = this.extractSceneFromHook(hook, niche);
+
+    return `${basePrompt} ${sceneDescription}. ${nicheContext}. ${typeContext}. Real person with natural features, authentic expression, genuine moment captured. 8K quality, realistic colors, shallow depth of field.`;
+  }
+
+  private getNichePhotoContext(niche: string): string {
+    const contexts: Record<string, string> = {
+      fitness: 'Modern gym environment, athletic setting, real workout equipment',
+      food: 'Real restaurant or kitchen, authentic culinary environment',
+      fashion: 'Real boutique or urban setting, authentic fashion scene',
+      beauty: 'Natural salon setting, authentic beauty environment',
+      tech: 'Real office workspace, modern tech environment',
+      coaching: 'Professional consultation space, mentoring environment',
+    };
+
+    const lowerNiche = niche.toLowerCase();
+    for (const [key, value] of Object.entries(contexts)) {
+      if (lowerNiche.includes(key)) return value;
+    }
+
+    return 'Professional real-world setting, authentic environment';
+  }
+
+  private extractSceneFromHook(hook: string, niche: string): string {
+    // Extrair ação/cena do hook
+    // Exemplo: "3 erros que estás a cometer no treino" → "person training in gym making common mistakes"
+    
+    const lowerHook = hook.toLowerCase();
+    const lowerNiche = niche.toLowerCase();
+    
+    if (lowerNiche.includes('fitness') || lowerNiche.includes('gym')) {
+      if (lowerHook.includes('erro') || lowerHook.includes('errado')) {
+        return 'Real personal trainer demonstrating correct form to avoid common mistakes';
+      }
+      return 'Real athlete training in authentic gym setting';
+    }
+    
+    if (lowerNiche.includes('food') || lowerNiche.includes('restaurante')) {
+      return 'Real chef or food professional in authentic kitchen environment';
+    }
+
+    return `Real professional in authentic ${niche} setting`;
+  }
+
+  private selectStrategicHashtags(
+    postType: string,
+    niche: string,
+    hashtagStrategy: any
+  ): string[] {
+    // Mix estratégico: 30% alto volume, 50% médio, 20% nicho
+    const high = hashtagStrategy.high?.slice(0, 2) || [];
+    const medium = hashtagStrategy.medium?.slice(0, 3) || [];
+    const nicheHash = hashtagStrategy.niche?.slice(0, 2) || [];
+
+    return [...high, ...medium, ...nicheHash];
+  }
+
+  private getBestTimeForType(postType: string, schedule: any): string {
+    const times = schedule.bestTimes || ['09:00', '13:00', '19:00'];
+    
+    const typeTimeMap: Record<string, number> = {
+      educational: 0, // Manhã (09:00)
+      viral: 2,       // Noite (19:00)
+      sales: 1,       // Meio-dia (13:00)
+    };
+
+    const index = typeTimeMap[postType] || 0;
+    return times[index] || times[0];
   }
 
   async generateContentIdeas(
@@ -173,12 +462,6 @@ Formato JSON:
 Nicho: ${data.niche}
 Objetivo: ${data.objective}
 Tom: ${data.tone}
-
-Cada ideia deve ter:
-- Título/Hook cativante
-- Tipo (carrossel/reel/post)
-- Valor que entrega
-- Dificuldade de criar (fácil/média/difícil)
 
 JSON:
 {
@@ -732,40 +1015,45 @@ Retorna estratégia em JSON:
   }
 }
 
-// ==========================
-// ATUALIZAR O ORCHESTRATOR
-// ==========================
 export class AIOrchestrator {
   private strategyAgent: StrategyAgent;
+  private marketingStrategist: MarketingStrategistAgent; // NOVO!
   private contentAgent: ContentAgent;
   private analysisAgent: AnalysisAgent;
   private schedulingAgent: SchedulingAgent;
-  private visualAgent: VisualAgent; // NOVO!
+  private visualAgent: VisualAgent;
 
   constructor() {
     this.strategyAgent = new StrategyAgent();
+    this.marketingStrategist = new MarketingStrategistAgent(); // NOVO!
     this.contentAgent = new ContentAgent();
     this.analysisAgent = new AnalysisAgent();
     this.schedulingAgent = new SchedulingAgent();
-    this.visualAgent = new VisualAgent(); // NOVO!
+    this.visualAgent = new VisualAgent();
   }
 
   async processOnboarding(data: OnboardingData) {
     console.log('🤖 Multi-Agent System iniciado...');
+    console.log('👥 Agentes: Strategy, Marketing Strategist (NOVO!), Content, Visual, Analysis, Scheduling');
 
-    // Fase 1: Strategy Agent
+    // Fase 1: Strategy Agent cria estratégia geral
     console.log('📊 Strategy Agent a trabalhar...');
     const strategy = await this.strategyAgent.createStrategy(data);
 
-    // Fase 2: Content Agent
-    console.log('✍️ Content Agent a gerar conteúdo...');
-    const [initialPosts, contentIdeas] = await Promise.all([
-      this.contentAgent.generateInitialPosts(data, strategy.result),
-      this.contentAgent.generateContentIdeas(data, 10),
-    ]);
+    // Fase 2: Marketing Strategist + Content Agent criam posts
+    console.log('🎯 Marketing Strategist Agent a criar copy estratégico em PT-PT...');
+    const initialPosts = await this.contentAgent.generateInitialPosts(
+      data,
+      strategy.result,
+      this.marketingStrategist // PASSA O MARKETING STRATEGIST!
+    );
 
-    // Fase 3: Visual Agent - GERA AS IMAGENS! 🎨
-    console.log('🎨 Visual Agent a criar imagens profissionais...');
+    // Fase 3: Content Agent gera ideias adicionais
+    console.log('💡 Content Agent a gerar ideias...');
+    const contentIdeas = await this.contentAgent.generateContentIdeas(data, 10);
+
+    // Fase 4: Visual Agent - GERA AS IMAGENS! 🎨
+    console.log('🎨 Visual Agent a criar imagens ultra-realistas...');
     const visualContent = await this.visualAgent.generateImagesForPosts(
       initialPosts.result.posts,
       {
@@ -782,11 +1070,11 @@ export class AIOrchestrator {
       visualMetadata: visualContent.result.images[index],
     }));
 
-    // Fase 4: Analysis Agent
+    // Fase 5: Analysis Agent
     console.log('🔍 Analysis Agent a analisar...');
     const profileAnalysis = await this.analysisAgent.analyzePerfectProfile(data);
 
-    // Fase 5: Scheduling Agent
+    // Fase 6: Scheduling Agent
     console.log('📅 Scheduling Agent a criar calendário...');
     const calendar = await this.schedulingAgent.createWeeklyCalendar(
       data,
@@ -804,22 +1092,26 @@ export class AIOrchestrator {
 
     console.log('✅ Multi-Agent System concluído!');
     console.log(`💰 Tokens totais: ${totalTokens}`);
+    console.log(`🎯 Posts criados com estratégia de marketing profissional!`);
+    console.log(`🇵🇹 Linguagem: PT-PT (português de Portugal)`);
 
     return {
       strategy: strategy.result,
-      initialPosts: postsWithImages, // AGORA COM IMAGENS! 🎉
+      initialPosts: postsWithImages, // Com imagens E copy estratégico!
       contentIdeas: contentIdeas.result.ideas,
+      nicheInsights: initialPosts.result.nicheInsights, // NOVO!
       profileAnalysis: profileAnalysis.result,
       weeklyCalendar: calendar.result,
-      visualStrategy: visualContent.result.visualStrategy, // NOVO!
+      visualStrategy: visualContent.result.visualStrategy,
       metadata: {
         totalTokens,
         cost: (totalTokens / 1000) * 0.01,
         processingTime: new Date(),
         agents: [
           strategy.agent,
+          'MarketingStrategistAgent', // NOVO!
           initialPosts.agent,
-          visualContent.agent, // NOVO!
+          visualContent.agent,
           contentIdeas.agent,
           profileAnalysis.agent,
           calendar.agent,

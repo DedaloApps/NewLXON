@@ -704,198 +704,153 @@ export default function DashboardPage() {
           </Card>
         </div>
 
-        {/* Posts Prontos com PostCard */}
-        <Card className="mb-8">
-          <CardHeader className="border-b bg-white">
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <CheckCircle className="w-5 h-5 text-green-600" />
-                Posts Prontos para Publicar
-              </CardTitle>
-              <div className="flex items-center gap-3">
-                <Badge variant="outline">{initialPosts.length} posts</Badge>
-                <Button
-                  onClick={generateMediaForPosts}
-                  disabled={isGeneratingMedia}
-                  variant="outline"
-                  size="sm"
-                  className="gap-2"
+{/* Posts Prontos */}
+<Card className="mb-8">
+  <CardHeader>
+    <div className="flex items-center justify-between">
+      <CardTitle className="flex items-center gap-2">
+        <CheckCircle className="w-5 h-5 text-green-600" />
+        Posts Prontos para Publicar
+      </CardTitle>
+      
+      {/* NOVO BOTÃO */}
+      <Button 
+        onClick={() => router.push('/content-hub')}
+        className="gap-2 bg-gradient-to-r from-blue-600 to-purple-600"
+      >
+        <Calendar className="w-4 h-4" />
+        Abrir Content Hub
+      </Button>
+    </div>
+  </CardHeader>
+  <CardContent>
+    <div className="space-y-4">
+      {initialPosts.map((post: any, index: number) => (
+        <div
+          key={index}
+          className="border rounded-lg overflow-hidden hover:border-blue-300 transition-colors"
+        >
+          {/* Imagem do Post */}
+          {post.imageUrl && (
+            <div className="relative h-64 bg-gray-100">
+              <img
+                src={post.imageUrl}
+                alt={post.hook}
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute top-2 right-2">
+                <Badge
+                  className={
+                    post.type === "educational"
+                      ? "bg-blue-600"
+                      : post.type === "viral"
+                      ? "bg-purple-600"
+                      : "bg-green-600"
+                  }
                 >
-                  {isGeneratingMedia ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                      Gerando...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4" />
-                      Gerar Imagens
-                    </>
-                  )}
+                  {post.type === "educational"
+                    ? "📚 Educativo"
+                    : post.type === "viral"
+                    ? "🔥 Viral"
+                    : "💰 Vendas"}
+                </Badge>
+              </div>
+            </div>
+          )}
+
+          {/* Conteúdo */}
+          <div className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex gap-2">
+                {post.type && (
+                  <Badge
+                    variant="outline"
+                    className={
+                      post.type === "educational"
+                        ? "bg-blue-100 text-blue-700"
+                        : post.type === "viral"
+                        ? "bg-purple-100 text-purple-700"
+                        : "bg-green-100 text-green-700"
+                    }
+                  >
+                    {post.type === "educational"
+                      ? "📚 Educativo"
+                      : post.type === "viral"
+                      ? "🔥 Viral"
+                      : "💰 Vendas"}
+                  </Badge>
+                )}
+                <Badge variant="outline" className="text-xs">
+                  {post.bestTimeToPost}
+                </Badge>
+              </div>
+              
+              {/* BOTÕES ATUALIZADOS */}
+              <div className="flex gap-2">
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => router.push(`/content-hub?post=${index}`)}
+                >
+                  Ver no Hub
+                </Button>
+                <Button size="sm">
+                  Publicar Agora
                 </Button>
               </div>
             </div>
-          </CardHeader>
-          <CardContent className="p-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {initialPosts.map((post: any, index: number) => (
-                <PostCard
-                  key={index}
-                  post={post}
-                  onPublish={() => {
-                    console.log('Publicar post:', post.hook);
-                  }}
-                />
+
+            <h3 className="font-bold text-lg mb-2">{post.hook}</h3>
+            <p className="text-gray-700 mb-3 line-clamp-3">{post.caption}</p>
+
+            <div className="flex flex-wrap gap-2 mb-3">
+              {post.hashtags?.slice(0, 5).map((tag: string, i: number) => (
+                <span key={i} className="text-sm text-blue-600">
+                  #{tag}
+                </span>
               ))}
             </div>
-          </CardContent>
-        </Card>
 
-        {/* Content Strategy Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          {/* Content Pillars */}
-          <Card>
-            <CardHeader className="border-b bg-white">
-              <CardTitle className="flex items-center gap-2">
-                <Target className="w-5 h-5 text-blue-600" />
-                Pilares de Conteúdo
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="space-y-6">
-                {strategy.contentPillars.map((pillar: any, index: number) => (
-                  <div key={index} className="border-l-4 border-blue-600 pl-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-semibold text-gray-900">{pillar.name}</h3>
-                      <Badge className="bg-blue-100 text-blue-700 border-blue-200">
-                        {pillar.percentage}%
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-gray-600 mb-3">{pillar.description}</p>
-                    <div className="flex flex-wrap gap-2">
-                      {pillar.examples.map((example: string, i: number) => (
-                        <Badge key={i} variant="outline" className="text-xs">
-                          {example}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Format Mix */}
-          <Card>
-            <CardHeader className="border-b bg-white">
-              <CardTitle className="flex items-center gap-2">
-                <LayoutGrid className="w-5 h-5 text-purple-600" />
-                Mix de Formatos
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="space-y-6">
-                {Object.entries(strategy.formatMix).map(([format, percentage]: any) => {
-                  const formatIcons: any = {
-                    carousels: LayoutGrid,
-                    reels: Video,
-                    single: Image,
-                    stories: Zap,
-                  };
-                  const FormatIcon = formatIcons[format] || LayoutGrid;
-
-                  return (
-                    <div key={format}>
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          <FormatIcon className="w-4 h-4 text-gray-600" />
-                          <span className="font-medium capitalize text-gray-900">{format}</span>
-                        </div>
-                        <span className="font-bold text-gray-900">{percentage}%</span>
-                      </div>
-                      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-gradient-to-r from-blue-600 to-purple-600 transition-all"
-                          style={{ width: `${percentage}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <div className="flex items-center gap-2 mb-3">
-                  <Clock className="w-5 h-5 text-blue-600" />
-                  <h4 className="font-semibold text-blue-900">Melhores Horários</h4>
-                </div>
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {strategy.postingSchedule.bestTimes.map((time: string) => (
-                    <Badge key={time} className="bg-blue-600">
-                      {time}
-                    </Badge>
-                  ))}
-                </div>
-                <p className="text-sm text-blue-700">
-                  {strategy.postingSchedule.reasoning}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+            <div className="flex items-center gap-3 text-sm text-gray-600">
+              <span className="flex items-center gap-1">
+                <Target className="w-4 h-4" />
+                CTA: {post.cta}
+              </span>
+              <span className="flex items-center gap-1">
+                <TrendingUp className="w-4 h-4" />
+                Engagement: {post.estimatedEngagement}
+              </span>
+            </div>
+          </div>
         </div>
-
-        {/* Content Ideas */}
-        <Card>
-          <CardHeader className="border-b bg-white">
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <Lightbulb className="w-5 h-5 text-yellow-600" />
-                Ideias de Conteúdo
-              </CardTitle>
-              <Badge variant="outline">{contentIdeas.length} ideias</Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {contentIdeas.map((idea: any, index: number) => (
-                <Card
-                  key={index}
-                  className="p-4 hover:border-blue-300 transition-colors cursor-pointer"
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <Badge variant="outline" className="text-xs capitalize">
-                      {idea.type}
-                    </Badge>
-                    <Badge
-                      className={
-                        idea.difficulty === "easy"
-                          ? "bg-green-100 text-green-700 border-green-200"
-                          : idea.difficulty === "medium"
-                          ? "bg-yellow-100 text-yellow-700 border-yellow-200"
-                          : "bg-red-100 text-red-700 border-red-200"
-                      }
-                    >
-                      {idea.difficulty}
-                    </Badge>
-                  </div>
-                  <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">
-                    {idea.title}
-                  </h3>
-                  <p className="text-sm text-gray-600 mb-3 line-clamp-2">{idea.value}</p>
-                  <div className="flex items-center justify-between text-xs text-gray-500 pt-3 border-t">
-                    <div className="flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
-                      <span>{idea.estimatedTime}</span>
-                    </div>
-                    <Button size="sm" variant="outline" className="h-7 text-xs">
-                      Gerar
-                    </Button>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+      ))}
+    </div>
+    
+    {/* Call to Action no final */}
+    <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
+      <div className="flex items-start gap-3">
+        <div className="flex-shrink-0 w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+          <Calendar className="w-5 h-5 text-white" />
+        </div>
+        <div className="flex-1">
+          <h4 className="font-semibold text-gray-900 mb-1">
+            Gere o teu conteúdo no Content Hub
+          </h4>
+          <p className="text-sm text-gray-600 mb-3">
+            Calendário profissional, preview de redes sociais, análise de engagement e muito mais
+          </p>
+          <Button 
+            onClick={() => router.push('/content-hub')}
+            className="gap-2"
+          >
+            <Calendar className="w-4 h-4" />
+            Abrir Content Hub
+          </Button>
+        </div>
+      </div>
+    </div>
+  </CardContent>
+</Card>
       </div>
     </div>
   );

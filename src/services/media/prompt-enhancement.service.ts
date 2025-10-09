@@ -1,4 +1,6 @@
 // src/services/media/prompt-enhancement.service.ts
+// SUBSTITUIR COMPLETAMENTE O FICHEIRO EXISTENTE
+
 import OpenAI from 'openai';
 
 const openai = new OpenAI({
@@ -30,7 +32,94 @@ interface EnhancedPrompt {
 
 export class PromptEnhancementService {
   /**
-   * MÉTODO PRINCIPAL: Otimiza prompts simples em prompts profissionais
+   * NOVO: Sistema anti-IA - Torna imagens indistinguíveis de fotos reais
+   */
+  private getAntiAIModifiers(hasPeople: boolean): string {
+    const baseRealism = [
+      'professional DSLR camera photograph',
+      'shot on Canon EOS R5',
+      'natural lighting',
+      'authentic scene',
+      'candid photography',
+      '85mm f/1.8 lens',
+      'shallow depth of field',
+      'natural color grading',
+      'photojournalistic style',
+      'documentary photography',
+      'real-world setting',
+    ];
+
+    if (hasPeople) {
+      return [
+        ...baseRealism,
+        // CRÍTICO para pessoas realistas
+        'real person',
+        'authentic human features',
+        'natural skin texture',
+        'realistic facial features',
+        'genuine expression',
+        'natural body proportions',
+        'real-life scenario',
+        'lifestyle photography',
+        'caught in the moment',
+        'natural pose',
+        'real clothing and materials',
+        'authentic environment interaction',
+      ].join(', ');
+    }
+
+    return baseRealism.join(', ');
+  }
+
+  /**
+   * Negative prompt ULTRA-FORTE para evitar aspecto de IA
+   */
+  private getUltraRealisticNegativePrompt(): string {
+    return [
+      // Anti-IA
+      'artificial', 'AI-generated', 'synthetic', 'computer generated', 'digital art',
+      'CGI', '3D render', 'illustration', 'drawing', 'painting', 'cartoon',
+      'anime', 'manga', 'sketch', 'vector', 'graphic design',
+      
+      // Anti-pessoas fake
+      'plastic skin', 'doll-like', 'mannequin', 'wax figure', 'robot',
+      'uncanny valley', 'fake person', 'artificial human',
+      'smooth skin', 'perfect skin', 'porcelain skin',
+      'airbrushed', 'photoshopped face', 'fake smile',
+      
+      // Anti-qualidade baixa
+      'blurry', 'low quality', 'pixelated', 'distorted', 'deformed',
+      'bad anatomy', 'wrong proportions', 'mutated', 'disfigured',
+      'ugly', 'poorly rendered', 'amateur',
+      
+      // Anti-elementos óbvios de IA
+      'oversaturated', 'overprocessed', 'fake lighting', 'studio backdrop',
+      'generic stock photo', 'cliché pose', 'staged',
+      'perfect composition', 'too clean', 'unrealistic colors',
+      
+      // Problemas técnicos
+      'watermark', 'signature', 'text overlay', 'logo',
+      'duplicate', 'multiple people', 'extra limbs', 'missing fingers',
+    ].join(', ');
+  }
+
+  /**
+   * Detecta se o prompt menciona pessoas
+   */
+  private hasPeopleInPrompt(prompt: string): boolean {
+    const peopleKeywords = [
+      'person', 'people', 'man', 'woman', 'trainer', 'athlete',
+      'coach', 'client', 'customer', 'human', 'face', 'portrait',
+      'someone', 'individual', 'professional', 'worker',
+      'girl', 'boy', 'adult', 'student', 'teacher'
+    ];
+    
+    const lowerPrompt = prompt.toLowerCase();
+    return peopleKeywords.some(keyword => lowerPrompt.includes(keyword));
+  }
+
+  /**
+   * MÉTODO PRINCIPAL MELHORADO
    */
   async enhancePrompt(options: PromptEnhancementOptions): Promise<EnhancedPrompt> {
     const {
@@ -41,61 +130,129 @@ export class PromptEnhancementService {
       style = 'professional',
     } = options;
 
+    // Detectar se tem pessoas no prompt
+    const hasPeople = this.hasPeopleInPrompt(basicPrompt);
+
     // Se incluir texto, usa IA para gerar prompt otimizado
     if (includeText) {
-      return await this.generateTextBasedPrompt(options);
+      return await this.generateTextBasedPrompt(options, hasPeople);
     }
 
-    // Caso contrário, otimiza o prompt básico
-    return this.optimizeBasicPrompt(basicPrompt, style, imageType, context);
+    // Caso contrário, cria prompt ultra-realista manualmente
+    return this.createUltraRealisticPrompt(basicPrompt, style, imageType, context, hasPeople);
   }
 
   /**
-   * Gera prompts para imagens com texto usando GPT-4
+   * Cria prompt ultra-realista sem IA (mais rápido)
+   */
+  private createUltraRealisticPrompt(
+    basicPrompt: string,
+    style: string,
+    imageType: string,
+    context: any,
+    hasPeople: boolean
+  ): EnhancedPrompt {
+    // Modific adores anti-IA
+    const antiAI = this.getAntiAIModifiers(hasPeople);
+    
+    // Especificações técnicas de fotografia real
+    const photoSpecs = [
+      'natural lighting',
+      'authentic colors',
+      'real environment',
+      'high resolution',
+      '8K quality',
+      'sharp focus',
+      'professional photography',
+    ].join(', ');
+
+    // Construir prompt final
+    const fullPrompt = [
+      basicPrompt,
+      antiAI,
+      photoSpecs,
+      this.getContextualRealism(context),
+    ].filter(Boolean).join('. ');
+
+    return {
+      fullPrompt,
+      negativePrompt: this.getUltraRealisticNegativePrompt(),
+      dalleStyle: 'natural', // SEMPRE natural para realismo
+      quality: 'hd',
+    };
+  }
+
+  /**
+   * Adiciona realismo contextual
+   */
+  private getContextualRealism(context?: any): string {
+    if (!context?.businessType) return '';
+
+    const realisticContexts: Record<string, string> = {
+      fitness: 'Real gym environment, authentic workout setting, natural athletic movement, genuine fitness atmosphere',
+      food: 'Real restaurant or kitchen, authentic food presentation, natural dining environment, genuine culinary setting',
+      fashion: 'Real boutique or outdoor setting, authentic fashion scene, natural model poses, genuine style environment',
+      beauty: 'Real salon or natural setting, authentic beauty scenario, genuine skincare moment, real-life beauty routine',
+      tech: 'Real office or workspace, authentic tech environment, genuine professional setting, natural work scenario',
+      coaching: 'Real consultation space, authentic mentoring moment, genuine professional interaction, natural coaching environment',
+    };
+
+    return realisticContexts[context.businessType.toLowerCase()] || '';
+  }
+
+  /**
+   * Gera prompts para imagens com texto (usa GPT-4)
    */
   private async generateTextBasedPrompt(
-    options: PromptEnhancementOptions
+    options: PromptEnhancementOptions,
+    hasPeople: boolean
   ): Promise<EnhancedPrompt> {
     const { basicPrompt, includeText, style, imageType, context } = options;
 
-    const systemPrompt = `És um expert em design gráfico e marketing visual. 
-Crias prompts detalhados para DALL-E 3 que geram imagens profissionais com texto LEGÍVEL e bem integrado.
+    const systemPrompt = `És um fotógrafo profissional e expert em direção de arte.
+Crias prompts que geram imagens INDISTINGUÍVEIS de fotografias reais.
 
-REGRAS CRÍTICAS PARA TEXTO LEGÍVEL:
-1. Sempre especifica: "bold, clear, readable typography"
-2. Define contraste: "high contrast text on [cor] background"
-3. Hierarquia visual clara: tamanho e peso das fontes
-4. Layout profissional: espaçamento, alinhamento
-5. Fonte apropriada ao estilo (sans-serif para moderno, serif para elegante)
+REGRAS CRÍTICAS:
+1. SEMPRE começar com "Professional DSLR photograph"
+2. Especificar câmera e lente (Canon EOS R5, 85mm f/1.8)
+3. Iluminação NATURAL apenas
+4. Ambientes e pessoas REAIS
+5. Texturas e detalhes naturais
+6. Zero elementos artificiais ou "perfeitos"
+${hasPeople ? '7. PESSOAS REAIS: pele com textura, expressões genuínas, poses naturais' : ''}
 
-EVITA:
-- Texto pequeno ou ilegível
-- Baixo contraste
-- Fontes decorativas complexas
-- Sobreposição confusa`;
+PARA TEXTO NA IMAGEM:
+- Fonte bold e legível
+- Alto contraste
+- Integrado naturalmente na composição
+- Parece adicionado profissionalmente, não gerado por IA`;
 
-    const userPrompt = `Cria um prompt profissional para DALL-E 3 que gere uma imagem de ${imageType} para ${context?.businessType || 'negócio'}.
+    const userPrompt = `Cria um prompt ULTRA-REALISTA para DALL-E 3:
 
 CONTEXTO:
-- Prompt base: "${basicPrompt}"
-- Estilo desejado: ${style}
-- Público-alvo: ${context?.targetAudience || 'geral'}
-- Objetivo: ${context?.contentGoal || 'engagement'}
+- Cena base: "${basicPrompt}"
+- Estilo: ${style}
+- Tipo: ${imageType}
+- Negócio: ${context?.businessType || 'geral'}
 
-TEXTO A INCLUIR NA IMAGEM:
-- Texto principal: "${includeText?.mainText}"
-${includeText?.subtext ? `- Subtexto: "${includeText.subtext}"` : ''}
-- Estilo de texto: ${includeText?.style || 'modern'}
+TEXTO NA IMAGEM:
+- Principal: "${includeText?.mainText}"
+${includeText?.subtext ? `- Secundário: "${includeText.subtext}"` : ''}
 
-FORMATO DE RESPOSTA (JSON):
+O prompt DEVE:
+1. Começar com especificações de câmera profissional
+2. Descrever cena realista e autêntica
+3. Incluir instruções para texto legível e bem integrado
+4. Evitar qualquer elemento que pareça IA ou sintético
+${hasPeople ? '5. Pessoa REAL com textura de pele natural e expressão genuína' : ''}
+
+Retorna JSON:
 {
-  "fullPrompt": "prompt detalhado com instruções específicas para texto legível",
-  "negativePrompt": "elementos a evitar",
-  "dalleStyle": "natural ou vivid",
+  "fullPrompt": "prompt detalhado ultra-realista",
+  "negativePrompt": "tudo a evitar",
+  "dalleStyle": "natural",
   "quality": "hd"
-}
-
-O prompt deve ser extremamente detalhado e profissional, garantindo que o texto seja PERFEITAMENTE LEGÍVEL.`;
+}`;
 
     try {
       const completion = await openai.chat.completions.create({
@@ -111,193 +268,15 @@ O prompt deve ser extremamente detalhado e profissional, garantindo que o texto 
       const response = JSON.parse(completion.choices[0].message.content || '{}');
 
       return {
-        fullPrompt: response.fullPrompt || this.getFallbackPrompt(options),
-        negativePrompt: response.negativePrompt || this.getDefaultNegativePrompt(),
-        dalleStyle: response.dalleStyle || 'vivid',
+        fullPrompt: response.fullPrompt || this.createUltraRealisticPrompt(basicPrompt, style || 'professional', imageType, context, hasPeople).fullPrompt,
+        negativePrompt: this.getUltraRealisticNegativePrompt(),
+        dalleStyle: 'natural',
         quality: 'hd',
       };
     } catch (error) {
       console.error('Erro ao gerar prompt com IA:', error);
-      return this.getFallbackPrompt(options);
+      return this.createUltraRealisticPrompt(basicPrompt, style || 'professional', imageType, context, hasPeople);
     }
-  }
-
-  /**
-   * Otimiza prompt básico sem texto
-   */
-  private optimizeBasicPrompt(
-    basicPrompt: string,
-    style: string,
-    imageType: string,
-    context?: any
-  ): EnhancedPrompt {
-    const styleEnhancements = this.getStyleEnhancements(style);
-    const imageTypeSpecs = this.getImageTypeSpecs(imageType);
-    const contextualDetails = this.getContextualDetails(context);
-
-    const fullPrompt = [
-      basicPrompt,
-      styleEnhancements,
-      imageTypeSpecs,
-      contextualDetails,
-      'professional photography, high quality, sharp focus, well-composed, proper lighting',
-    ]
-      .filter(Boolean)
-      .join(', ');
-
-    return {
-      fullPrompt,
-      negativePrompt: this.getDefaultNegativePrompt(),
-      dalleStyle: style === 'professional' || style === 'authentic' ? 'natural' : 'vivid',
-      quality: 'hd',
-    };
-  }
-
-  /**
-   * Melhorias de estilo detalhadas
-   */
-  private getStyleEnhancements(style: string): string {
-    const enhancements: Record<string, string> = {
-      professional:
-        'corporate aesthetic, clean lines, modern design, professional color palette, polished finish, studio quality, minimalist composition, business-appropriate',
-      
-      authentic:
-        'natural lighting, candid feel, genuine atmosphere, realistic textures, organic composition, relatable scene, honest representation, lifestyle photography style',
-      
-      vibrant:
-        'bold saturated colors, energetic composition, dynamic angles, eye-catching contrast, vivid tones, attention-grabbing, modern color grading, Instagram-worthy aesthetic',
-      
-      minimalist:
-        'simple composition, clean background, negative space, geometric shapes, limited color palette, Scandinavian design influence, uncluttered, focus on essentials',
-      
-      luxury:
-        'premium materials, elegant composition, sophisticated color palette, high-end aesthetic, refined details, upscale ambiance, polished finish, editorial quality',
-    };
-
-    return enhancements[style] || enhancements.professional;
-  }
-
-  /**
-   * Especificações por tipo de imagem
-   */
-  private getImageTypeSpecs(imageType: string): string {
-    const specs: Record<string, string> = {
-      carousel:
-        'Instagram carousel format, cohesive visual story, consistent style across series, educational layout, infographic elements if relevant',
-      
-      post:
-        'Instagram feed optimization, square composition, thumb-stopping visual, engaging focal point, mobile-first design',
-      
-      story:
-        'vertical 9:16 format, story-friendly layout, quick visual impact, mobile viewing optimized, swipe-up ready if applicable',
-      
-      'reel-thumbnail':
-        'attention-grabbing thumbnail, clear visual hierarchy, works at small size, enticing preview, YouTube/Instagram reel optimized',
-    };
-
-    return specs[imageType] || specs.post;
-  }
-
-  /**
-   * Detalhes contextuais baseados no negócio
-   */
-  private getContextualDetails(context?: any): string {
-    if (!context?.businessType) return '';
-
-    const contextMap: Record<string, string> = {
-      fitness:
-        'motivational energy, athletic aesthetics, health-focused, gym environment or outdoor setting',
-      
-      food:
-        'appetizing presentation, food photography lighting, culinary appeal, restaurant quality plating',
-      
-      fashion:
-        'fashion editorial style, trendy aesthetics, style-conscious composition, boutique quality',
-      
-      tech:
-        'modern tech aesthetic, innovation vibe, clean digital design, futuristic elements',
-      
-      beauty:
-        'beauty product photography standards, skincare aesthetic, cosmetic appeal, spa-like quality',
-      
-      coaching:
-        'inspirational atmosphere, growth mindset visual, professional consulting vibe, trustworthy presence',
-    };
-
-    return contextMap[context.businessType.toLowerCase()] || '';
-  }
-
-  /**
-   * Negative prompt padrão para qualidade profissional
-   */
-  private getDefaultNegativePrompt(): string {
-    return [
-      'blurry, low quality, pixelated, distorted',
-      'amateur, unprofessional, poorly lit',
-      'watermark, signature, text artifacts',
-      'deformed, disfigured, bad anatomy',
-      'cartoon, anime, 3D render (unless specifically wanted)',
-      'overly processed, artificial look, fake',
-      'cluttered, messy composition',
-      'stock photo feel, generic, cliche',
-    ].join(', ');
-  }
-
-  /**
-   * Prompt de fallback caso IA falhe
-   */
-  private getFallbackPrompt(options: PromptEnhancementOptions): EnhancedPrompt {
-    const { basicPrompt, includeText, style } = options;
-
-    let textInstructions = '';
-    if (includeText) {
-      textInstructions = `, featuring bold readable text "${includeText.mainText}" in ${
-        includeText.style || 'modern'
-      } typography with high contrast, clear legibility, professional font choice`;
-    }
-
-    const styleDesc = this.getStyleEnhancements(style || 'professional');
-
-    return {
-      fullPrompt: `${basicPrompt}${textInstructions}, ${styleDesc}, professional quality, high resolution, sharp focus`,
-      negativePrompt: this.getDefaultNegativePrompt(),
-      dalleStyle: 'vivid',
-      quality: 'hd',
-    };
-  }
-
-  /**
-   * MÉTODO AUXILIAR: Gera múltiplos prompts para carrossel
-   */
-  async generateCarouselPrompts(slides: Array<{
-    title: string;
-    content: string;
-    includeText?: boolean;
-  }>, context?: any): Promise<Array<EnhancedPrompt>> {
-    const prompts: EnhancedPrompt[] = [];
-
-    for (const slide of slides) {
-      const options: PromptEnhancementOptions = {
-        basicPrompt: slide.content,
-        context,
-        imageType: 'carousel',
-        style: 'professional',
-        ...(slide.includeText && {
-          includeText: {
-            mainText: slide.title,
-            style: 'bold',
-          },
-        }),
-      };
-
-      const enhancedPrompt = await this.enhancePrompt(options);
-      prompts.push(enhancedPrompt);
-
-      // Delay para evitar rate limits
-      await new Promise((resolve) => setTimeout(resolve, 500));
-    }
-
-    return prompts;
   }
 }
 

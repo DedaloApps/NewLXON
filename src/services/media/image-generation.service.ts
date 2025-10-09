@@ -15,7 +15,7 @@ const replicate = process.env.REPLICATE_API_KEY
 
 interface ImageGenerationOptions {
   prompt: string;
-  style?: 'realistic' | 'professional' | 'authentic' | 'vibrant' | 'minimalist' | 'luxury';
+  style?: 'professional' | 'authentic' | 'vibrant' | 'minimalist' | 'luxury';
   aspectRatio?: '1:1' | '4:5' | '16:9' | '9:16';
   quality?: 'standard' | 'hd';
   

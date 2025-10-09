@@ -463,49 +463,330 @@ Transformas ideias em imagens e vídeos impactantes usando IA de última geraç�
   }
 }
 
+
+// src/services/ai/multi-agent-system.ts
+// ADICIONAR ESTE AGENTE AO FICHEIRO EXISTENTE
+
+
+
+// src/services/ai/multi-agent-system.ts
+// ADICIONAR ESTE AGENTE AO FICHEIRO EXISTENTE
+
 // ==========================
-// ORCHESTRATOR - Coordena todos os agentes
+// 5. VISUAL AGENT (NOVO!)
+// ==========================
+class VisualAgent {
+  private systemPrompt = `Tu és o Visual Agent, especialista em criar estratégias visuais profissionais.
+És expert em:
+- Criar prompts detalhados para geração de imagens por IA
+- Garantir consistência visual da marca
+- Otimizar imagens para engajamento em redes sociais
+- Criar texto legível e impactante em imagens
+- Escolher o estilo visual ideal para cada tipo de conteúdo
+
+Pensas como um diretor de arte com 10+ anos de experiência em social media.`;
+
+  /**
+   * Gera imagens para os posts iniciais
+   */
+  async generateImagesForPosts(
+    posts: any[],
+    businessContext: {
+      niche: string;
+      audience?: string;
+      tone: string;
+    }
+  ): Promise<AgentResponse<any>> {
+    console.log(`🎨 Visual Agent a gerar ${posts.length} imagens...`);
+    
+    const imagesGenerated = [];
+    let totalTokens = 0;
+
+    for (const post of posts) {
+      try {
+        // Decidir se deve incluir texto na imagem
+        const shouldIncludeText = this.shouldIncludeTextInImage(post.type);
+        
+        // Extrair contexto do negócio
+        const context = {
+          businessType: this.extractBusinessType(businessContext.niche),
+          targetAudience: businessContext.audience || 'geral',
+          contentGoal: this.mapPostTypeToGoal(post.type),
+        };
+
+        // Gerar a imagem com o serviço otimizado
+        const imageUrl = await imageGenerationService.generateImage({
+          prompt: post.imagePrompt,
+          style: this.selectStyleForPost(post.type, businessContext.tone),
+          aspectRatio: '1:1',
+          imageType: 'post',
+          context,
+          ...(shouldIncludeText && {
+            includeText: {
+              mainText: this.extractMainText(post.hook || post.caption),
+              style: 'bold',
+            },
+          }),
+        });
+
+        imagesGenerated.push({
+          postType: post.type,
+          imageUrl,
+          imagePrompt: post.imagePrompt,
+          hasText: shouldIncludeText,
+        });
+
+        console.log(`✅ Imagem ${imagesGenerated.length}/${posts.length} gerada`);
+        
+        // Delay para evitar rate limits
+        if (imagesGenerated.length < posts.length) {
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+        }
+      } catch (error) {
+        console.error(`❌ Erro ao gerar imagem para post ${post.type}:`, error);
+        
+        // Usar placeholder em caso de erro
+        imagesGenerated.push({
+          postType: post.type,
+          imageUrl: 'https://via.placeholder.com/1080x1080/3B82F6/FFFFFF?text=Placeholder',
+          imagePrompt: post.imagePrompt,
+          hasText: false,
+          error: true,
+        });
+      }
+    }
+
+    return {
+      agent: 'VisualAgent',
+      result: {
+        images: imagesGenerated,
+        visualStrategy: await this.createVisualStrategy(businessContext),
+      },
+      tokensUsed: totalTokens,
+      timestamp: new Date(),
+    };
+  }
+
+  /**
+   * Cria estratégia visual da marca
+   */
+  private async createVisualStrategy(businessContext: any): Promise<any> {
+    const prompt = `Cria uma estratégia visual completa para:
+
+Negócio: ${businessContext.niche}
+Público: ${businessContext.audience || 'Geral'}
+Tom: ${businessContext.tone}
+
+Retorna estratégia em JSON:
+{
+  "colorPalette": {
+    "primary": "#hex",
+    "secondary": "#hex",
+    "accent": "#hex",
+    "reasoning": "Porquê estas cores"
+  },
+  "visualStyle": {
+    "overall": "minimalist/vibrant/professional/authentic",
+    "photography": "descrição do estilo fotográfico",
+    "typography": "clean/bold/elegant",
+    "filters": "sugestões de filtros"
+  },
+  "contentGuidelines": {
+    "do": ["diretriz 1", "diretriz 2"],
+    "dont": ["evitar 1", "evitar 2"]
+  },
+  "templateSuggestions": [
+    {
+      "type": "carousel_education",
+      "layout": "descrição do layout",
+      "useCase": "quando usar"
+    }
+  ]
+}`;
+
+    try {
+      const completion = await openai.chat.completions.create({
+        model: 'gpt-4-turbo-preview',
+        messages: [
+          { role: 'system', content: this.systemPrompt },
+          { role: 'user', content: prompt },
+        ],
+        temperature: 0.7,
+        response_format: { type: 'json_object' },
+      });
+
+      return JSON.parse(completion.choices[0].message.content || '{}');
+    } catch (error) {
+      console.error('Erro ao criar estratégia visual:', error);
+      return this.getDefaultVisualStrategy();
+    }
+  }
+
+  /**
+   * Decide se deve incluir texto na imagem
+   */
+  private shouldIncludeTextInImage(postType: string): boolean {
+    const typesWithText = ['educational', 'announcement', 'promotional', 'tip'];
+    return typesWithText.includes(postType.toLowerCase());
+  }
+
+  /**
+   * Extrai tipo de negócio do nicho
+   */
+  private extractBusinessType(niche: string): string {
+    const businessTypes: Record<string, string[]> = {
+      fitness: ['fitness', 'gym', 'workout', 'personal trainer', 'yoga'],
+      food: ['restaurant', 'food', 'chef', 'catering', 'bakery'],
+      fashion: ['fashion', 'clothing', 'boutique', 'style', 'designer'],
+      beauty: ['beauty', 'makeup', 'skincare', 'cosmetics', 'salon'],
+      tech: ['tech', 'software', 'app', 'saas', 'startup'],
+      coaching: ['coach', 'consulting', 'mentor', 'advisor'],
+    };
+
+    const nicheLower = niche.toLowerCase();
+    for (const [type, keywords] of Object.entries(businessTypes)) {
+      if (keywords.some((keyword) => nicheLower.includes(keyword))) {
+        return type;
+      }
+    }
+
+    return 'professional';
+  }
+
+  /**
+   * Mapeia tipo de post para objetivo
+   */
+  private mapPostTypeToGoal(postType: string): string {
+    const goalMap: Record<string, string> = {
+      educational: 'educação',
+      viral: 'engagement',
+      sales: 'conversão',
+      promotional: 'conversão',
+      behind_scenes: 'autenticidade',
+      testimonial: 'prova social',
+    };
+
+    return goalMap[postType.toLowerCase()] || 'engagement';
+  }
+
+  /**
+   * Seleciona estilo visual para o post
+   */
+  private selectStyleForPost(postType: string, tone: string): 'professional' | 'vibrant' | 'authentic' | 'minimalist' | 'luxury' {
+    // Mapear tom para estilo
+    const toneStyleMap: Record<string, 'professional' | 'vibrant' | 'authentic' | 'minimalist' | 'luxury'> = {
+      professional: 'professional',
+      casual: 'authentic',
+      energetic: 'vibrant',
+      elegant: 'luxury',
+      minimal: 'minimalist',
+      bold: 'vibrant',
+    };
+
+    // Se o tom especificar um estilo, usa esse
+    const baseStyle = toneStyleMap[tone.toLowerCase()] || 'professional';
+
+    // Ajustar baseado no tipo de post
+    if (postType === 'viral' || postType === 'entertainment') {
+      return 'vibrant';
+    }
+    if (postType === 'sales' || postType === 'promotional') {
+      return 'professional';
+    }
+
+    return baseStyle;
+  }
+
+  /**
+   * Extrai texto principal para a imagem
+   */
+  private extractMainText(text: string): string {
+    // Pegar primeiras 3 palavras ou até 25 caracteres
+    const words = text.split(' ').slice(0, 3).join(' ');
+    return words.length > 25 ? words.substring(0, 22) + '...' : words;
+  }
+
+  /**
+   * Estratégia visual padrão (fallback)
+   */
+  private getDefaultVisualStrategy(): any {
+    return {
+      colorPalette: {
+        primary: '#3B82F6',
+        secondary: '#8B5CF6',
+        accent: '#F59E0B',
+        reasoning: 'Cores vibrantes e modernas para social media',
+      },
+      visualStyle: {
+        overall: 'professional',
+        photography: 'Clean, well-lit, modern aesthetic',
+        typography: 'Bold and readable',
+        filters: 'Subtle brightness and contrast enhancement',
+      },
+      contentGuidelines: {
+        do: ['Use high-quality images', 'Maintain brand colors', 'Keep text minimal'],
+        dont: ['Use low-resolution images', 'Overcrowd with text', 'Use inconsistent styles'],
+      },
+      templateSuggestions: [],
+    };
+  }
+}
+
+// ==========================
+// ATUALIZAR O ORCHESTRATOR
 // ==========================
 export class AIOrchestrator {
   private strategyAgent: StrategyAgent;
   private contentAgent: ContentAgent;
   private analysisAgent: AnalysisAgent;
   private schedulingAgent: SchedulingAgent;
-  private mediaAgent: MediaAgent;
+  private visualAgent: VisualAgent; // NOVO!
 
   constructor() {
     this.strategyAgent = new StrategyAgent();
     this.contentAgent = new ContentAgent();
     this.analysisAgent = new AnalysisAgent();
     this.schedulingAgent = new SchedulingAgent();
-    this.mediaAgent = new MediaAgent();
+    this.visualAgent = new VisualAgent(); // NOVO!
   }
 
   async processOnboarding(data: OnboardingData) {
     console.log('🤖 Multi-Agent System iniciado...');
 
-    // Fase 1: Strategy Agent cria a estratégia
+    // Fase 1: Strategy Agent
     console.log('📊 Strategy Agent a trabalhar...');
     const strategy = await this.strategyAgent.createStrategy(data);
 
-    // Fase 2: Content Agent gera posts iniciais e ideias
+    // Fase 2: Content Agent
     console.log('✍️ Content Agent a gerar conteúdo...');
     const [initialPosts, contentIdeas] = await Promise.all([
       this.contentAgent.generateInitialPosts(data, strategy.result),
       this.contentAgent.generateContentIdeas(data, 10),
     ]);
 
-    // Fase 3: Media Agent gera imagens E VÍDEOS para os posts
-    console.log('🎨 Media Agent a gerar mídia (imagens + vídeos)...');
-    const postsWithMedia = await this.mediaAgent.generateMediaForPosts(
-      initialPosts.result.posts
+    // Fase 3: Visual Agent - GERA AS IMAGENS! 🎨
+    console.log('🎨 Visual Agent a criar imagens profissionais...');
+    const visualContent = await this.visualAgent.generateImagesForPosts(
+      initialPosts.result.posts,
+      {
+        niche: data.niche,
+        audience: data.audience,
+        tone: data.tone,
+      }
     );
 
-    // Fase 4: Analysis Agent analisa perfil ideal
+    // Combinar posts com imagens geradas
+    const postsWithImages = initialPosts.result.posts.map((post: any, index: number) => ({
+      ...post,
+      imageUrl: visualContent.result.images[index]?.imageUrl,
+      visualMetadata: visualContent.result.images[index],
+    }));
+
+    // Fase 4: Analysis Agent
     console.log('🔍 Analysis Agent a analisar...');
     const profileAnalysis = await this.analysisAgent.analyzePerfectProfile(data);
 
-    // Fase 5: Scheduling Agent cria calendário
+    // Fase 5: Scheduling Agent
     console.log('📅 Scheduling Agent a criar calendário...');
     const calendar = await this.schedulingAgent.createWeeklyCalendar(
       data,
@@ -516,21 +797,21 @@ export class AIOrchestrator {
     const totalTokens =
       strategy.tokensUsed +
       initialPosts.tokensUsed +
+      visualContent.tokensUsed +
       contentIdeas.tokensUsed +
       profileAnalysis.tokensUsed +
       calendar.tokensUsed;
 
     console.log('✅ Multi-Agent System concluído!');
-    console.log(`💰 Tokens totais usados: ${totalTokens}`);
-    console.log(`🖼️ Posts com mídia: ${postsWithMedia.length}`);
-    console.log(`🎬 Vídeos gerados: ${postsWithMedia.filter(p => p.format === 'REEL').length}`);
+    console.log(`💰 Tokens totais: ${totalTokens}`);
 
     return {
       strategy: strategy.result,
-      initialPosts: postsWithMedia, // COM IMAGENS E VÍDEOS!
+      initialPosts: postsWithImages, // AGORA COM IMAGENS! 🎉
       contentIdeas: contentIdeas.result.ideas,
       profileAnalysis: profileAnalysis.result,
       weeklyCalendar: calendar.result,
+      visualStrategy: visualContent.result.visualStrategy, // NOVO!
       metadata: {
         totalTokens,
         cost: (totalTokens / 1000) * 0.01,
@@ -538,7 +819,7 @@ export class AIOrchestrator {
         agents: [
           strategy.agent,
           initialPosts.agent,
-          'MediaAgent',
+          visualContent.agent, // NOVO!
           contentIdeas.agent,
           profileAnalysis.agent,
           calendar.agent,

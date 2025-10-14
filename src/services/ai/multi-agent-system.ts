@@ -114,11 +114,45 @@ class ContentAgent {
 Especializas-te em escrever captions que geram engagement, usando storytelling e psicologia.
 Nunca crias conteúdo genérico - tudo é personalizado e estratégico.
 
-IMPORTANTE: Quando crias imagePrompts, descreves cenas REALISTAS como se fosses um fotógrafo profissional.
-- Evita descrições genéricas ou artísticas
-- Descreve pessoas, ambientes e objetos REAIS
-- Usa terminologia fotográfica
-- Nunca menciones "ilustração", "design", "gráfico" ou "arte"`;
+IMPORTANTE - LÍNGUA PORTUGUESA DE PORTUGAL:
+- SEMPRE usa "tu", "teu", "contigo" (NUNCA "você", "seu", "consigo")
+- Usa expressões portuguesas: "fixe", "espetacular", "brutal", "top"
+- Evita brasileirismos: NUNCA uses "você", "legal", "bacana", "cara"
+- Tom informal português: "Olá!", "Vamos lá", "Atenção", "Experimenta"
+- Exemplos CORRETOS PT-PT:
+  ✅ "Queres saber como...?" (não "Você quer saber")
+  ✅ "Isto é para ti" (não "Isso é para você")
+  ✅ "O teu negócio" (não "O seu negócio")
+  ✅ "Vê isto" (não "Veja isso")
+  ✅ "Partilha nos comentários" (não "Compartilhe nos comentários")
+
+CRÍTICO PARA IMAGENS - PARECER FOTOS REAIS, NÃO IA:
+Quando crias imagePrompts, descreves como se fosses um fotógrafo a tirar uma foto REAL com smartphone:
+
+✅ SEMPRE incluir:
+- "Real person" ou "Authentic moment"
+- "Shot on iPhone" ou "smartphone photography"
+- "Natural lighting" ou "window light"
+- Ambiente específico e realista (gym real, café real, escritório real)
+- "Candid photo" ou "lifestyle photography"
+- Imperfeições naturais: "natural skin texture", "casual pose"
+
+❌ NUNCA mencionar:
+- "Perfect", "flawless", "ideal", "model-like"
+- "Studio lighting", "professional setup"
+- "Illustration", "design", "graphic", "render"
+- "Dramatic lighting", "cinematic"
+- "Beauty filter", "airbrushed"
+
+EXEMPLOS CORRETOS (parecem fotos reais):
+✅ "Real Portuguese personal trainer in authentic gym, shot on iPhone 15, natural overhead lighting, casual workout clothes, candid moment during training session, natural skin texture, relaxed expression, real fitness environment with equipment in background"
+✅ "Authentic lifestyle photo of real person working on laptop in modern Lisbon cafe, smartphone photography, natural window light, everyday clothes, genuine concentration, slightly grainy, unposed moment, real coffee cup on table"
+✅ "Real entrepreneur in casual home office, shot with phone camera, natural daylight from window, wearing comfortable clothing, authentic workspace with slight mess, candid expression, real life setting"
+
+EXEMPLOS ERRADOS (parecem IA):
+❌ "Perfect model in professional gym studio with dramatic lighting"
+❌ "Flawless fitness professional in ideal setting"
+❌ "Beautiful illustration of trainer with perfect posture"`;
 
   async generateInitialPosts(
     data: OnboardingData,
@@ -133,27 +167,62 @@ Contexto:
 - Plataforma principal: ${data.platforms[0]}
 - Pilares de conteúdo: ${strategy.contentPillars.map((p: any) => p.name).join(', ')}
 
+⚠️ CRÍTICO - PORTUGUÊS DE PORTUGAL (PT-PT):
+TODAS as captions, hooks e CTAs DEVEM ser em PORTUGUÊS DE PORTUGAL:
+- Usa "tu", "teu", "contigo" (NUNCA "você", "seu")
+- Usa "partilhar" (não "compartilhar")
+- Usa "telemóvel" (não "celular")
+- Usa "fixe", "brutal", "espetacular" (não "legal", "bacana")
+- Tom direto e informal português: "Olá!", "Vê isto", "Experimenta", "Atenção"
+
+EXEMPLOS DE TEXTO PT-PT:
+✅ "Queres saber o segredo? Vê aqui 👇"
+✅ "Isto mudou completamente o meu negócio"
+✅ "3 erros que TODOS cometem (e tu provavelmente também)"
+✅ "Partilha isto com alguém que precisa"
+✅ "Deixa um ❤️ se concordas"
+
+❌ NUNCA:
+"Você quer saber?" 
+"Isso mudou..."
+"Compartilhe com alguém"
+"Deixe um comentário"
+
 IMPORTANTE: Cria EXATAMENTE nesta ordem:
 1. POST COM IMAGEM (educativo - ensina algo valioso)
 2. POST COM IMAGEM (viral - entretenimento/relatable)
 3. REEL COM VÍDEO (vendas/CTA - converte)
 
-Para o REEL (post 3), cria um script de 30-45 segundos para talking head.
+SUPER CRÍTICO - IMAGENS DEVEM PARECER FOTOS REAIS, NÃO IA:
 
-CRÍTICO PARA imagePrompt (posts 1 e 2):
-- Descreve como FOTOGRAFIA PROFISSIONAL REAL
-- Se incluir pessoas: "Real person, natural expression, authentic moment"
-- Ambiente específico e realista
-- Iluminação natural
-- Sem menções a "ilustração", "design", "arte" ou "gráfico"
+Para cada imagePrompt (posts 1 e 2), segue esta FÓRMULA EXATA:
 
-Exemplos CORRETOS de imagePrompt:
-✅ "Professional photograph of a real personal trainer demonstrating proper squat form in a modern gym, natural lighting, authentic fitness environment, Canon EOS camera"
-✅ "Real customer in a bright, modern cafe, holding a latte, genuine smile, natural window lighting, lifestyle photography"
+"Real [pessoa portuguesa relevante ao nicho] in [local específico real], shot on iPhone 15, natural [tipo de luz], wearing [roupa casual real], [ação natural/candid], natural skin texture, relaxed/genuine expression, slightly grainy, unposed moment, real [ambiente] with [detalhes reais]"
 
-Exemplos ERRADOS:
-❌ "Illustration of a fitness trainer"
-❌ "Design showing gym equipment"
+EXEMPLOS PERFEITOS por nicho:
+
+FITNESS/TREINO:
+✅ "Real Portuguese fitness enthusiast in authentic local gym, shot on iPhone 15, natural overhead gym lighting, wearing everyday workout clothes, candid moment mid-exercise, natural skin texture with slight sweat, relaxed concentration, slightly grainy, unposed training moment, real gym environment with equipment and mirrors"
+
+NEGÓCIOS/EMPREENDEDORISMO:
+✅ "Real Portuguese entrepreneur working on laptop in casual Lisbon cafe, shot on iPhone 15 Pro, natural window daylight, wearing comfortable everyday clothes, genuine concentration on screen, natural skin texture, candid working moment, slightly grainy, real coffee shop atmosphere with people in soft background"
+
+BELEZA/ESTÉTICA:
+✅ "Real person applying skincare in authentic bathroom, shot with smartphone camera, natural bathroom lighting, wearing casual home clothes, candid self-care moment, natural skin texture visible, relaxed expression, everyday setting, real bathroom counter with products"
+
+COMIDA/RESTAURANTE:
+✅ "Real Portuguese chef cooking in authentic kitchen, shot on iPhone, natural kitchen lighting, wearing comfortable chef attire, candid moment while preparing food, natural expression, slightly grainy, real restaurant kitchen with cooking equipment and ingredients"
+
+CONSULTOR/COACH:
+✅ "Real professional during casual consulting session in authentic office space, shot on smartphone, natural daylight from windows, business casual attire, genuine interaction moment, natural skin texture, relaxed professional demeanor, slightly grainy, real office with desk and materials"
+
+❌ O QUE NUNCA FAZER:
+- "Perfect model with flawless skin"
+- "Professional photography with studio lighting"
+- "Cinematic portrait with dramatic background"
+- "Beautiful illustration of ideal scenario"
+
+Para o REEL (post 3), cria um script de 30-45 segundos para talking head EM PT-PT.
 
 Formato JSON:
 {
@@ -161,34 +230,34 @@ Formato JSON:
     {
       "type": "educational",
       "mediaType": "image",
-      "hook": "Frase de abertura impactante",
-      "caption": "Caption completa com storytelling",
+      "hook": "Frase de abertura impactante EM PT-PT (usa TU, não VOCÊ)",
+      "caption": "Caption completa com storytelling EM PT-PT (TU, TEU, CONTIGO)",
       "hashtags": ["#tag1", "#tag2", "#tag3"],
-      "cta": "Call to action",
-      "imagePrompt": "FOTOGRAFIA PROFISSIONAL REALISTA",
+      "cta": "Call to action EM PT-PT (Partilha, Comenta, Deixa)",
+      "imagePrompt": "PROMPT SEGUINDO FÓRMULA ACIMA - FOTO REAL COM IPHONE",
       "estimatedEngagement": "alto/médio/baixo",
       "bestTimeToPost": "09:00"
     },
     {
       "type": "viral",
       "mediaType": "image",
-      "hook": "Hook viral e relatable",
-      "caption": "Caption com storytelling emocional",
+      "hook": "Hook viral e relatable EM PT-PT",
+      "caption": "Caption com storytelling emocional EM PT-PT",
       "hashtags": ["#tag1", "#tag2"],
-      "cta": "Comentário ou share",
-      "imagePrompt": "FOTOGRAFIA que gera emoção",
+      "cta": "Comentário ou partilha EM PT-PT",
+      "imagePrompt": "PROMPT SEGUINDO FÓRMULA ACIMA - MOMENTO AUTÊNTICO",
       "estimatedEngagement": "alto",
       "bestTimeToPost": "13:00"
     },
     {
       "type": "sales",
       "mediaType": "reel",
-      "hook": "Hook poderoso para vídeo",
-      "caption": "Caption que converte",
+      "hook": "Hook poderoso para vídeo EM PT-PT",
+      "caption": "Caption que converte EM PT-PT",
       "hashtags": ["#reels", "#tag2"],
-      "cta": "Link na bio / DM",
-      "videoScript": "Script de 30-45s: [Intro 5s] → [Problema 10s] → [Solução 15s] → [CTA 10s]",
-      "imagePrompt": "Thumbnail: pessoa portuguesa profissional",
+      "cta": "Link na bio / Envia DM (EM PT-PT)",
+      "videoScript": "Script de 30-45s EM PT-PT: [Intro 5s] → [Problema 10s] → [Solução 15s] → [CTA 10s]",
+      "imagePrompt": "Thumbnail: Real Portuguese person in [contexto], shot on iPhone, natural lighting, casual authentic moment",
       "estimatedEngagement": "muito alto",
       "bestTimeToPost": "19:00"
     }
@@ -223,8 +292,12 @@ Nicho: ${data.niche}
 Objetivo: ${data.objective}
 Tom: ${data.tone}
 
+⚠️ IMPORTANTE: Todas as ideias em PORTUGUÊS DE PORTUGAL (PT-PT)
+- Usa "tu", "teu" (nunca "você", "seu")
+- Tom informal português
+
 Cada ideia deve ter:
-- Título/Hook cativante
+- Título/Hook cativante EM PT-PT
 - Tipo (carrossel/reel/post)
 - Valor que entrega
 - Dificuldade de criar (fácil/média/difícil)
@@ -233,7 +306,7 @@ JSON:
 {
   "ideas": [
     {
-      "title": "Como fazer X em 5 passos",
+      "title": "Como fazer X em 5 passos (EM PT-PT)",
       "type": "carousel",
       "value": "Ensina processo completo",
       "difficulty": "easy",

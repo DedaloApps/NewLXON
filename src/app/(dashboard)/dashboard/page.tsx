@@ -1,12 +1,19 @@
 // src/app/(dashboard)/dashboard/page.tsx
 "use client";
-
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { X, Download } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+
 import {
   Sparkles,
   Target,
@@ -137,6 +144,8 @@ function PostCard({ post, onPublish }: PostCardProps) {
         </div>
       );
     }
+
+    
 
     // CARROSSEL
     if (postFormat === 'CAROUSEL') {
@@ -304,6 +313,7 @@ export default function DashboardPage() {
   const [showConfetti, setShowConfetti] = useState(false);
   const [showInstagramReport, setShowInstagramReport] = useState(false);
   const [isGeneratingMedia, setIsGeneratingMedia] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   useEffect(() => {
     if (searchParams.get("onboarding") === "completed") {
@@ -521,7 +531,7 @@ export default function DashboardPage() {
                   ) : (
                     <>
                       <ChevronDown className="w-4 h-4" />
-                      Ver Completo
+                      Ver Imagem
                     </>
                   )}
                 </Button>
@@ -704,7 +714,7 @@ export default function DashboardPage() {
           </Card>
         </div>
 
-{/* Posts Prontos */}
+{/* Posts Prontos - GRID DE CARDS */}
 <Card className="mb-8">
   <CardHeader>
     <div className="flex items-center justify-between">
@@ -713,7 +723,6 @@ export default function DashboardPage() {
         Posts Prontos para Publicar
       </CardTitle>
       
-      {/* NOVO BOTÃO */}
       <Button 
         onClick={() => router.push('/content-hub')}
         className="gap-2 bg-gradient-to-r from-blue-600 to-purple-600"
@@ -724,28 +733,52 @@ export default function DashboardPage() {
     </div>
   </CardHeader>
   <CardContent>
-    <div className="space-y-4">
+    {/* GRID DE 3 COLUNAS */}
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {initialPosts.map((post: any, index: number) => (
-        <div
+        <Card
           key={index}
-          className="border rounded-lg overflow-hidden hover:border-blue-300 transition-colors"
+          className="overflow-hidden hover:shadow-xl transition-all duration-300 group border-2 hover:border-blue-400"
         >
-          {/* Imagem do Post */}
+          {/* IMAGEM CLICÁVEL */}
           {post.imageUrl && (
-            <div className="relative h-64 bg-gray-100">
+            <div
+              className="relative h-64 bg-gray-100 overflow-hidden cursor-pointer"
+              onClick={() => setSelectedImage(post.imageUrl)}
+            >
               <img
                 src={post.imageUrl}
                 alt={post.hook}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
               />
-              <div className="absolute top-2 right-2">
+              
+              {/* Overlay ao hover */}
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all duration-300 flex items-center justify-center">
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="bg-white hover:bg-gray-100"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedImage(post.imageUrl);
+                    }}
+                  >
+                    <Image className="w-4 h-4 mr-2" />
+                    Ver Completa
+                  </Button>
+                </div>
+              </div>
+
+              {/* Badge do tipo */}
+              <div className="absolute top-3 right-3">
                 <Badge
                   className={
                     post.type === "educational"
-                      ? "bg-blue-600"
+                      ? "bg-blue-600 text-white"
                       : post.type === "viral"
-                      ? "bg-purple-600"
-                      : "bg-green-600"
+                      ? "bg-purple-600 text-white"
+                      : "bg-green-600 text-white"
                   }
                 >
                   {post.type === "educational"
@@ -758,85 +791,65 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* Conteúdo */}
-          <div className="p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex gap-2">
-                {post.type && (
-                  <Badge
-                    variant="outline"
-                    className={
-                      post.type === "educational"
-                        ? "bg-blue-100 text-blue-700"
-                        : post.type === "viral"
-                        ? "bg-purple-100 text-purple-700"
-                        : "bg-green-100 text-green-700"
-                    }
-                  >
-                    {post.type === "educational"
-                      ? "📚 Educativo"
-                      : post.type === "viral"
-                      ? "🔥 Viral"
-                      : "💰 Vendas"}
-                  </Badge>
-                )}
-                <Badge variant="outline" className="text-xs">
-                  {post.bestTimeToPost}
-                </Badge>
-              </div>
-              
-              {/* BOTÕES ATUALIZADOS */}
-              <div className="flex gap-2">
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  onClick={() => router.push(`/content-hub?post=${index}`)}
-                >
-                  Ver no Hub
-                </Button>
-                <Button size="sm">
-                  Publicar Agora
-                </Button>
-              </div>
+          {/* Conteúdo do Card */}
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-4">
+              <Badge variant="outline" className="gap-1">
+                <Clock className="w-3 h-3" />
+                {post.bestTimeToPost}
+              </Badge>
+              <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                Publicar
+              </Button>
             </div>
 
-            <h3 className="font-bold text-lg mb-2">{post.hook}</h3>
-            <p className="text-gray-700 mb-3 line-clamp-3">{post.caption}</p>
+            <h3 className="font-bold text-lg mb-2 line-clamp-2 text-gray-900">
+              {post.hook}
+            </h3>
 
-            <div className="flex flex-wrap gap-2 mb-3">
-              {post.hashtags?.slice(0, 5).map((tag: string, i: number) => (
-                <span key={i} className="text-sm text-blue-600">
-                  #{tag}
+            <p className="text-gray-600 text-sm mb-4 line-clamp-3">
+              {post.caption}
+            </p>
+
+            <div className="flex flex-wrap gap-1 mb-4">
+              {post.hashtags?.slice(0, 3).map((tag: string, i: number) => (
+                <span key={i} className="text-xs text-blue-600">
+                  {tag}
                 </span>
               ))}
+              {post.hashtags?.length > 3 && (
+                <span className="text-xs text-gray-400">
+                  +{post.hashtags.length - 3}
+                </span>
+              )}
             </div>
 
-            <div className="flex items-center gap-3 text-sm text-gray-600">
-              <span className="flex items-center gap-1">
-                <Target className="w-4 h-4" />
-                CTA: {post.cta}
+            <div className="flex items-center justify-between text-xs text-gray-500 pt-4 border-t">
+              <span className="flex items-center gap-1 line-clamp-1">
+                <Target className="w-3 h-3 flex-shrink-0" />
+                {post.cta}
               </span>
               <span className="flex items-center gap-1">
-                <TrendingUp className="w-4 h-4" />
-                Engagement: {post.estimatedEngagement}
+                <TrendingUp className="w-3 h-3" />
+                {post.estimatedEngagement}
               </span>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       ))}
     </div>
     
-    {/* Call to Action no final */}
-    <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
-      <div className="flex items-start gap-3">
-        <div className="flex-shrink-0 w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-          <Calendar className="w-5 h-5 text-white" />
+    {/* Call to Action */}
+    <div className="mt-8 p-6 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
+      <div className="flex items-start gap-4">
+        <div className="flex-shrink-0 w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
+          <Calendar className="w-6 h-6 text-white" />
         </div>
         <div className="flex-1">
           <h4 className="font-semibold text-gray-900 mb-1">
             Gere o teu conteúdo no Content Hub
           </h4>
-          <p className="text-sm text-gray-600 mb-3">
+          <p className="text-sm text-gray-600 mb-4">
             Calendário profissional, preview de redes sociais, análise de engagement e muito mais
           </p>
           <Button 
@@ -851,7 +864,323 @@ export default function DashboardPage() {
     </div>
   </CardContent>
 </Card>
+
+        {/* Content Strategy Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+          {/* Content Pillars */}
+          <Card>
+            <CardHeader className="border-b bg-white">
+              <CardTitle className="flex items-center gap-2">
+                <Target className="w-5 h-5 text-blue-600" />
+                Pilares de Conteúdo
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="space-y-6">
+                {strategy.contentPillars.map((pillar: any, index: number) => (
+                  <div key={index} className="border-l-4 border-blue-600 pl-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="font-semibold text-gray-900">{pillar.name}</h3>
+                      <Badge className="bg-blue-100 text-blue-700 border-blue-200">
+                        {pillar.percentage}%
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-gray-600 mb-3">{pillar.description}</p>
+                    <div className="flex flex-wrap gap-2">
+                      {pillar.examples.map((example: string, i: number) => (
+                        <Badge key={i} variant="outline" className="text-xs">
+                          {example}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Format Mix */}
+          <Card>
+            <CardHeader className="border-b bg-white">
+              <CardTitle className="flex items-center gap-2">
+                <LayoutGrid className="w-5 h-5 text-purple-600" />
+                Mix de Formatos
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="space-y-6">
+                {Object.entries(strategy.formatMix).map(([format, percentage]: any) => {
+                  const formatIcons: any = {
+                    carousels: LayoutGrid,
+                    reels: Video,
+                    single: Image,
+                    stories: Zap,
+                  };
+                  const FormatIcon = formatIcons[format] || LayoutGrid;
+
+                  return (
+                    <div key={format}>
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <FormatIcon className="w-4 h-4 text-gray-600" />
+                          <span className="font-medium capitalize text-gray-900">{format}</span>
+                        </div>
+                        <span className="font-bold text-gray-900">{percentage}%</span>
+                      </div>
+                      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-blue-600 to-purple-600 transition-all"
+                          style={{ width: `${percentage}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="flex items-center gap-2 mb-3">
+                  <Clock className="w-5 h-5 text-blue-600" />
+                  <h4 className="font-semibold text-blue-900">Melhores Horários</h4>
+                </div>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {strategy.postingSchedule.bestTimes.map((time: string) => (
+                    <Badge key={time} className="bg-blue-600">
+                      {time}
+                    </Badge>
+                  ))}
+                </div>
+                <p className="text-sm text-blue-700">
+                  {strategy.postingSchedule.reasoning}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Content Ideas */}
+        <Card>
+          <CardHeader className="border-b bg-white">
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Lightbulb className="w-5 h-5 text-yellow-600" />
+                Ideias de Conteúdo
+              </CardTitle>
+              <Badge variant="outline">{contentIdeas.length} ideias</Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {contentIdeas.map((idea: any, index: number) => (
+                <Card
+                  key={index}
+                  className="p-4 hover:border-blue-300 transition-colors cursor-pointer"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <Badge variant="outline" className="text-xs capitalize">
+                      {idea.type}
+                    </Badge>
+                    <Badge
+                      className={
+                        idea.difficulty === "easy"
+                          ? "bg-green-100 text-green-700 border-green-200"
+                          : idea.difficulty === "medium"
+                          ? "bg-yellow-100 text-yellow-700 border-yellow-200"
+                          : "bg-red-100 text-red-700 border-red-200"
+                      }
+                    >
+                      {idea.difficulty}
+                    </Badge>
+                  </div>
+                  <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">
+                    {idea.title}
+                  </h3>
+                  <p className="text-sm text-gray-600 mb-3 line-clamp-2">{idea.value}</p>
+                  <div className="flex items-center justify-between text-xs text-gray-500 pt-3 border-t">
+                    <div className="flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      <span>{idea.estimatedTime}</span>
+                    </div>
+                    <Button size="sm" variant="outline" className="h-7 text-xs">
+                      Gerar
+                    </Button>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        
       </div>
+      {/* MODAL DE IMAGEM */}
+{/* MODAL DE IMAGEM E CONTEÚDO COMPLETO */}
+<Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
+  <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden p-0">
+    <DialogHeader className="px-6 py-4 border-b bg-white">
+      <DialogTitle className="flex items-center justify-between">
+        <span className="text-xl font-bold">Preview Completo do Post</span>
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              if (selectedImage) {
+                window.open(selectedImage, "_blank");
+              }
+            }}
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Download
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setSelectedImage(null)}
+          >
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
+      </DialogTitle>
+    </DialogHeader>
+    
+    <div className="overflow-y-auto max-h-[calc(90vh-80px)]">
+      {selectedImage && (
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-0">
+          {/* Coluna da Imagem - 2/5 */}
+          <div className="lg:col-span-2 bg-gray-50 p-6 flex items-center justify-center">
+            <img
+              src={selectedImage}
+              alt="Preview"
+              className="w-full h-auto rounded-lg shadow-2xl max-h-[70vh] object-contain"
+            />
+          </div>
+
+          {/* Coluna do Conteúdo - 3/5 */}
+          <div className="lg:col-span-3 p-8 space-y-6 bg-white">
+            {(() => {
+              const post = initialPosts.find((p: any) => p.imageUrl === selectedImage);
+              if (!post) return null;
+
+              return (
+                <>
+                  {/* Header com badges */}
+                  <div className="flex items-center gap-2 flex-wrap pb-4 border-b">
+                    <Badge
+                      className={`text-sm px-3 py-1 ${
+                        post.type === "educational"
+                          ? "bg-blue-600 text-white"
+                          : post.type === "viral"
+                          ? "bg-purple-600 text-white"
+                          : "bg-green-600 text-white"
+                      }`}
+                    >
+                      {post.type === "educational"
+                        ? "📚 Educativo"
+                        : post.type === "viral"
+                        ? "🔥 Viral"
+                        : "💰 Vendas"}
+                    </Badge>
+                    <Badge variant="outline" className="gap-1 text-sm px-3 py-1">
+                      <Clock className="w-3 h-3" />
+                      {post.bestTimeToPost}
+                    </Badge>
+                    <Badge variant="outline" className="gap-1 text-sm px-3 py-1">
+                      <TrendingUp className="w-3 h-3" />
+                      {post.estimatedEngagement}
+                    </Badge>
+                  </div>
+
+                  {/* Hook */}
+                  <div>
+                    <h3 className="text-3xl font-bold text-gray-900 leading-tight">
+                      {post.hook}
+                    </h3>
+                  </div>
+
+                  {/* Caption Completa */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <FileText className="w-4 h-4 text-gray-500" />
+                      <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+                        Caption
+                      </h4>
+                    </div>
+                    <div className="prose prose-sm max-w-none">
+                      <p className="text-gray-700 whitespace-pre-wrap leading-relaxed text-base">
+                        {post.caption}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Hashtags */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Hash className="w-4 h-4 text-gray-500" />
+                      <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+                        Hashtags
+                      </h4>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {post.hashtags?.map((tag: string, i: number) => (
+                        <Badge 
+                          key={i} 
+                          variant="secondary" 
+                          className="text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-3 py-1"
+                        >
+                          #{tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* CTA */}
+                  <div className="p-5 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0 w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+                        <Target className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-semibold text-blue-900 mb-1 uppercase tracking-wide">
+                          Call to Action
+                        </h4>
+                        <p className="text-blue-800 font-medium text-base">{post.cta}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Botões de ação */}
+                  <div className="flex gap-3 pt-6 border-t">
+                    <Button 
+                      className="flex-1 bg-blue-600 hover:bg-blue-700 h-12 text-base font-semibold"
+                      onClick={() => {
+                        setSelectedImage(null);
+                      }}
+                    >
+                      <CheckCircle className="w-5 h-5 mr-2" />
+                      Publicar Agora
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      className="h-12 px-6"
+                      onClick={() => {
+                        setSelectedImage(null);
+                        router.push('/content-hub');
+                      }}
+                    >
+                      <Calendar className="w-5 h-5 mr-2" />
+                      Editar
+                    </Button>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+    </div>
+  </DialogContent>
+</Dialog>
     </div>
   );
 }

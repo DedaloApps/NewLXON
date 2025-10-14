@@ -22,6 +22,71 @@ const onboardingSchema = z.object({
   tone: z.string().optional(),
 });
 
+// ✅ MÉTODO GET - Para buscar dados do onboarding
+export async function GET(req: NextRequest) {
+  try {
+    // Verificar autenticação
+    const session = await getServerSession();
+    if (!session?.user?.email) {
+      return NextResponse.json(
+        { error: "Não autenticado" },
+        { status: 401 }
+      );
+    }
+
+    // Buscar user
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+    });
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "Utilizador não encontrado" },
+        { status: 404 }
+      );
+    }
+
+    // Verificar se já completou onboarding
+    const onboarding = await prisma.onboardingResponse.findUnique({
+      where: { userId: user.id },
+    });
+
+    if (!onboarding) {
+      return NextResponse.json({
+        hasOnboarding: false,
+      });
+    }
+
+    // Retornar dados do onboarding
+    return NextResponse.json({
+      hasOnboarding: true,
+      data: {
+        business: onboarding.business,
+        businessDescription: onboarding.businessDescription,
+        audience: onboarding.audience,
+        audienceDetails: JSON.parse(onboarding.audienceDetails),
+        objective: onboarding.objective,
+        workMode: onboarding.workMode,
+        strategy: JSON.parse(onboarding.strategy),
+        initialPosts: JSON.parse(onboarding.initialPosts),
+        contentIdeas: JSON.parse(onboarding.contentIdeas),
+        profileAnalysis: JSON.parse(onboarding.profileAnalysis),
+        weeklyCalendar: JSON.parse(onboarding.weeklyCalendar),
+        instagramReport: onboarding.instagramReport 
+          ? JSON.parse(onboarding.instagramReport) 
+          : null,
+      },
+    });
+  } catch (error: any) {
+    console.error("Erro ao buscar onboarding:", error);
+    return NextResponse.json(
+      { error: error.message || "Erro ao buscar dados do onboarding" },
+      { status: 500 }
+    );
+  }
+}
+
+// ✅ MÉTODO POST - Para criar o onboarding
 export async function POST(req: NextRequest) {
   try {
     // Verificar autenticação
@@ -90,31 +155,64 @@ export async function POST(req: NextRequest) {
             generatedAt: new Date(),
           };
           instagramScore = instagramAnalysis.analysis.overallScore;
-          console.log(`✅ Análise Instagram concluída: Score ${instagramScore}/100`);
         }
       } catch (error) {
-        console.error("Erro na análise do Instagram (continuando sem ela):", error);
+        console.error("Erro ao analisar Instagram:", error);
       }
     }
 
-    // Iniciar Multi-Agent System (JÁ COM GERAÇÃO DE IMAGENS INTEGRADA!)
-    console.log("🤖 Iniciando Multi-Agent System...");
+    // ✅ GERAR ESTRATÉGIA COM MULTI-AGENT SYSTEM
+    // O VisualAgent JÁ VAI GUARDAR AS IMAGENS PERMANENTEMENTE!
+    console.log("🤖 A processar onboarding com Multi-Agent System...");
     const orchestrator = new AIOrchestrator();
     
-    const agentData = {
-      niche: `${validatedData.business} - ${validatedData.businessDescription}`,
-      objective: validatedData.objective,
-      platforms: validatedData.platforms || ["instagram"],
-      tone: validatedData.tone || "professional",
-      autoPosting: validatedData.workMode,
-      audience: validatedData.audience,
-      audienceDetails: validatedData.audienceDetails,
-    };
+    const result = await orchestrator.processOnboarding(
+      {
+        niche: validatedData.businessDescription,
+        objective: validatedData.objective,
+        platforms: validatedData.platforms || ["Instagram"],
+        tone: validatedData.tone || "professional",
+        autoPosting: validatedData.workMode,
+        audience: validatedData.audience,
+        audienceDetails: validatedData.audienceDetails,
+      },
+      user.id // ← PASSAR O userId PARA O ORCHESTRATOR!
+    );
 
-    // O orchestrator agora já retorna posts COM imagens!
-    const result = await orchestrator.processOnboarding(agentData);
+    console.log(`✅ Posts gerados com imagens permanentes em: content-images/${user.id}/`);
 
-    // Guardar na base de dados
+    // ✅ CRIAR POSTS NA BASE DE DADOS
+    console.log("📝 A criar posts na base de dados...");
+    
+    const createdPosts = await Promise.all(
+      result.initialPosts.map(async (post: any) => {
+        try {
+          return await prisma.post.create({
+            data: {
+              userId: user.id,
+              type: 'SINGLE',
+              status: 'DRAFT',
+              caption: post.caption,
+              hashtags: JSON.stringify(post.hashtags),
+              isAiGenerated: true,
+              aiPrompt: post.imagePrompt,
+              mediaUrls: JSON.stringify([post.imageUrl]), // URL PERMANENTE!
+              thumbnailUrl: post.imageUrl,
+              scheduledAt: post.bestTimeToPost
+                ? new Date(`${new Date().toISOString().split('T')[0]}T${post.bestTimeToPost}`)
+                : null,
+            },
+          });
+        } catch (error) {
+          console.error('Erro ao criar post:', error);
+          return null;
+        }
+      })
+    );
+
+    console.log(`✅ ${createdPosts.filter(p => p).length} posts criados na base de dados`);
+
+    // ✅ GUARDAR NO ONBOARDING RESPONSE
     const onboarding = await prisma.onboardingResponse.create({
       data: {
         userId: user.id,
@@ -128,7 +226,7 @@ export async function POST(req: NextRequest) {
         instagramReport: instagramReport ? JSON.stringify(instagramReport) : null,
         instagramScore: instagramScore,
         strategy: JSON.stringify(result.strategy),
-        initialPosts: JSON.stringify(result.initialPosts), // JÁ COM IMAGENS!
+        initialPosts: JSON.stringify(result.initialPosts), // JÁ TEM URLs PERMANENTES!
         contentIdeas: JSON.stringify(result.contentIdeas),
         profileAnalysis: JSON.stringify(result.profileAnalysis),
         weeklyCalendar: JSON.stringify(result.weeklyCalendar),
@@ -137,78 +235,25 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    console.log("✅ Onboarding completo e guardado na BD!");
-
     return NextResponse.json({
       success: true,
-      message: "Estratégia criada com sucesso! 🎉",
       data: {
-        ...result,
+        onboardingId: onboarding.id,
+        postsCreated: createdPosts.filter(p => p).length,
+        strategy: result.strategy,
+        initialPosts: result.initialPosts, // COM URLs PERMANENTES!
+        contentIdeas: result.contentIdeas,
+        profileAnalysis: result.profileAnalysis,
+        weeklyCalendar: result.weeklyCalendar,
         instagramReport: instagramReport,
+        storageInfo: result.storageInfo, // Info sobre onde as imagens foram guardadas
+        tokensUsed: result.metadata.totalTokens,
       },
-      onboardingId: onboarding.id,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Erro no onboarding:", error);
-
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Dados inválidos", details: error.issues },
-        { status: 400 }
-      );
-    }
-
     return NextResponse.json(
-      { error: "Erro ao processar onboarding" },
-      { status: 500 }
-    );
-  }
-}
-
-// GET - Buscar onboarding existente
-export async function GET(req: NextRequest) {
-  try {
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json(
-        { error: "Não autenticado" },
-        { status: 401 }
-      );
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      include: {
-        onboarding: true,
-      },
-    });
-
-    if (!user?.onboarding) {
-      return NextResponse.json(
-        { hasOnboarding: false },
-        { status: 200 }
-      );
-    }
-
-    return NextResponse.json({
-      hasOnboarding: true,
-      data: {
-        ...user.onboarding,
-        strategy: JSON.parse(user.onboarding.strategy),
-        initialPosts: JSON.parse(user.onboarding.initialPosts),
-        contentIdeas: JSON.parse(user.onboarding.contentIdeas),
-        profileAnalysis: JSON.parse(user.onboarding.profileAnalysis),
-        weeklyCalendar: JSON.parse(user.onboarding.weeklyCalendar),
-        audienceDetails: JSON.parse(user.onboarding.audienceDetails),
-        instagramReport: user.onboarding.instagramReport 
-          ? JSON.parse(user.onboarding.instagramReport)
-          : null,
-      },
-    });
-  } catch (error) {
-    console.error("Erro ao buscar onboarding:", error);
-    return NextResponse.json(
-      { error: "Erro ao buscar dados" },
+      { error: error.message || "Erro ao processar onboarding" },
       { status: 500 }
     );
   }

@@ -1,7 +1,6 @@
-// src/app/(dashboard)/onboarding/page.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -19,6 +18,8 @@ import {
   ArrowLeft,
   Loader2,
   AlertCircle,
+  Search,
+  X,
 } from "lucide-react";
 
 const QUESTIONS = [
@@ -165,6 +166,151 @@ const QUESTIONS = [
   },
 ];
 
+// Componente de Search com Dropdown
+function SearchableSelect({ 
+  options, 
+  value, 
+  onChange, 
+  placeholder = "Escreve para procurar..." 
+}: any) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const selectedOption = options.find((opt: any) => opt.value === value);
+
+  // Filtrar opções baseado na pesquisa
+  const filteredOptions = options.filter((opt: any) =>
+    opt.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    opt.description.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Fechar dropdown quando clicar fora
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleSelect = (optionValue: string) => {
+    onChange(optionValue);
+    setIsOpen(false);
+    setSearchTerm("");
+  };
+
+  const handleClear = () => {
+    onChange(null);
+    setSearchTerm("");
+  };
+
+  return (
+    <div ref={containerRef} className="relative">
+      {/* Input de pesquisa */}
+      <div className="relative">
+        <div
+          className="flex items-center gap-3 w-full p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-300 bg-white"
+          onClick={() => setIsOpen(!isOpen)}
+        >
+          <Search className="w-5 h-5 text-gray-400 flex-shrink-0" />
+          
+          {selectedOption ? (
+            <div className="flex-1 min-w-0">
+              <div className="font-medium truncate">{selectedOption.label}</div>
+              {selectedOption.description && (
+                <div className="text-sm text-gray-500 truncate">{selectedOption.description}</div>
+              )}
+            </div>
+          ) : (
+            <span className="flex-1 text-gray-400">{placeholder}</span>
+          )}
+
+          {selectedOption && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleClear();
+              }}
+              className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <X className="w-4 h-4 text-gray-500" />
+            </button>
+          )}
+        </div>
+
+        {/* Dropdown de opções */}
+        <AnimatePresence>
+          {isOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+              className="absolute z-50 w-full mt-2 bg-white border-2 border-gray-200 rounded-lg shadow-xl max-h-96 overflow-hidden"
+            >
+              {/* Barra de pesquisa dentro do dropdown */}
+              <div className="p-3 border-b sticky top-0 bg-white">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Procurar..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    autoFocus
+                  />
+                </div>
+              </div>
+
+              {/* Lista de opções */}
+              <div className="max-h-80 overflow-y-auto">
+                {filteredOptions.length === 0 ? (
+                  <div className="p-4 text-center text-gray-500">
+                    Nenhuma opção encontrada
+                  </div>
+                ) : (
+                  filteredOptions.map((option: any) => (
+                    <button
+                      key={option.value}
+                      onClick={() => handleSelect(option.value)}
+                      className={`w-full p-4 text-left hover:bg-blue-50 transition-colors border-b last:border-b-0 ${
+                        value === option.value ? "bg-blue-50" : ""
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-medium">{option.label}</span>
+                            {(option.popular || option.badge) && (
+                              <Badge className="bg-blue-100 text-blue-700 text-xs">
+                                {option.badge || "Popular"}
+                              </Badge>
+                            )}
+                          </div>
+                          {option.description && (
+                            <p className="text-sm text-gray-600">{option.description}</p>
+                          )}
+                        </div>
+                        {value === option.value && (
+                          <CheckCircle2 className="w-5 h-5 text-blue-600 flex-shrink-0 ml-2" />
+                        )}
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+}
+
 export default function OnboardingPage() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(0);
@@ -194,12 +340,10 @@ export default function OnboardingPage() {
       currentStep
     ];
 
-    // Pergunta 1: Precisa de resposta + descrição custom
     if (currentStep === 0) {
       return answers[questionKey] && customDescription.trim().length > 0;
     }
 
-    // Pergunta 2: Precisa de resposta + sub-perguntas
     if (currentStep === 1) {
       const hasMainAnswer = !!answers[questionKey];
       const hasSubAnswers =
@@ -207,9 +351,8 @@ export default function OnboardingPage() {
       return hasMainAnswer && hasSubAnswers;
     }
 
-    // Pergunta 4: Instagram (pode skip)
     if (currentStep === 3) {
-      return true; // Sempre pode avançar (é opcional)
+      return true;
     }
 
     return !!answers[questionKey];
@@ -230,7 +373,6 @@ export default function OnboardingPage() {
   };
 
   const handleSkip = () => {
-    // Skip Instagram question
     setCurrentStep(currentStep + 1);
   };
 
@@ -247,13 +389,11 @@ export default function OnboardingPage() {
         objective: answers.objective,
         instagram: instagramHandle || null,
         workMode: answers.workMode,
-        platforms: ["instagram"], // Default por agora
-        tone: "professional", // Default por agora
+        platforms: ["instagram"],
+        tone: "professional",
       };
 
       const response = await axios.post("/api/onboarding/process", finalAnswers);
-
-      // Redirecionar para dashboard
       router.push("/dashboard?onboarding=completed");
     } catch (err: any) {
       setError(err.response?.data?.error || "Erro ao processar. Tenta novamente.");
@@ -295,7 +435,6 @@ export default function OnboardingPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4">
-      {/* Progress Bar */}
       <div className="max-w-2xl mx-auto mb-8">
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm font-medium text-gray-600">
@@ -313,7 +452,6 @@ export default function OnboardingPage() {
         </div>
       </div>
 
-      {/* Question Card */}
       <div className="max-w-2xl mx-auto">
         <AnimatePresence mode="wait">
           <motion.div
@@ -325,7 +463,6 @@ export default function OnboardingPage() {
           >
             <Card>
               <CardContent className="p-8">
-                {/* Header */}
                 <div className="flex items-start gap-4 mb-8">
                   <div className="p-3 bg-blue-100 rounded-lg">
                     <currentQuestion.icon className="w-6 h-6 text-blue-600" />
@@ -343,7 +480,6 @@ export default function OnboardingPage() {
                   </div>
                 )}
 
-                {/* Instagram Question */}
                 {currentQuestion.type === "instagram" ? (
                   <div>
                     <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg p-6 mb-6">
@@ -394,55 +530,16 @@ export default function OnboardingPage() {
                     </div>
                   </div>
                 ) : (
-                  /* Regular Options */
-                  <div className="space-y-3 mb-8">
-                    {currentQuestion.options?.map((option: any) => {
-                      const questionKey = [
-                        "business",
-                        "audience",
-                        "objective",
-                        "instagram",
-                        "workMode",
-                      ][currentStep];
-                      const isSelected = answers[questionKey] === option.value;
-
-                      return (
-                        <motion.button
-                          key={option.value}
-                          onClick={() => handleAnswer(option.value)}
-                          className={`w-full p-4 rounded-lg border-2 text-left transition-all ${
-                            isSelected
-                              ? "border-blue-600 bg-blue-50"
-                              : "border-gray-200 hover:border-blue-300"
-                          }`}
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="font-medium">{option.label}</span>
-                                {(option.popular || option.badge) && (
-                                  <Badge className="bg-blue-100 text-blue-700 text-xs">
-                                    {option.badge || "Popular"}
-                                  </Badge>
-                                )}
-                              </div>
-                              {option.description && (
-                                <p className="text-sm text-gray-600">{option.description}</p>
-                              )}
-                            </div>
-                            {isSelected && (
-                              <CheckCircle2 className="w-5 h-5 text-blue-600 flex-shrink-0" />
-                            )}
-                          </div>
-                        </motion.button>
-                      );
-                    })}
+                  <div className="mb-8">
+                    <SearchableSelect
+                      options={currentQuestion.options}
+                      value={answers[["business", "audience", "objective", "instagram", "workMode"][currentStep]]}
+                      onChange={handleAnswer}
+                      placeholder="Clica aqui ou começa a escrever para procurar..."
+                    />
                   </div>
                 )}
 
-                {/* Custom Description Input (Question 1) */}
                 {currentQuestion.hasCustomInput && answers.business && (
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
@@ -461,7 +558,6 @@ export default function OnboardingPage() {
                   </motion.div>
                 )}
 
-                {/* Sub Questions (Question 2) */}
                 {currentQuestion.hasSubQuestions && answers.audience && (
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
@@ -493,7 +589,6 @@ export default function OnboardingPage() {
                   </motion.div>
                 )}
 
-                {/* Navigation */}
                 <div className="flex gap-3">
                   {currentStep > 0 && (
                     <Button

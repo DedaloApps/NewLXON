@@ -714,153 +714,138 @@ export default function DashboardPage() {
           </Card>
         </div>
 
-{/* Posts Prontos - GRID DE CARDS */}
+{/* Posts Prontos - VERSÃO ATUALIZADA */}
 <Card className="mb-8">
   <CardHeader>
-    <div className="flex items-center justify-between">
-      <CardTitle className="flex items-center gap-2">
-        <CheckCircle className="w-5 h-5 text-green-600" />
-        Posts Prontos para Publicar
-      </CardTitle>
-      
-      <Button 
-        onClick={() => router.push('/content-hub')}
-        className="gap-2 bg-gradient-to-r from-blue-600 to-purple-600"
-      >
-        <Calendar className="w-4 h-4" />
-        Abrir Content Hub
-      </Button>
-    </div>
+    <CardTitle className="flex items-center gap-2">
+      <CheckCircle className="w-5 h-5 text-green-600" />
+      Posts Prontos para Publicar
+    </CardTitle>
+    <p className="text-sm text-gray-600">2 Imagens + 1 Reel gerados automaticamente</p>
   </CardHeader>
   <CardContent>
-    {/* GRID DE 3 COLUNAS */}
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className="space-y-4">
       {initialPosts.map((post: any, index: number) => (
-        <Card
+        <div
           key={index}
-          className="overflow-hidden hover:shadow-xl transition-all duration-300 group border-2 hover:border-blue-400"
+          className="border rounded-lg overflow-hidden hover:border-blue-300 transition-colors"
         >
-          {/* IMAGEM CLICÁVEL */}
-          {post.imageUrl && (
-            <div
-              className="relative h-64 bg-gray-100 overflow-hidden cursor-pointer"
-              onClick={() => setSelectedImage(post.imageUrl)}
-            >
+          {/* Media do Post - IMAGEM ou VÍDEO */}
+          {post.mediaType === 'video' ? (
+            // REEL/VÍDEO
+            <div className="relative bg-black" style={{ aspectRatio: '9/16', maxHeight: '600px' }}>
+              <video
+                src={post.videoUrl}
+                poster={post.thumbnailUrl}
+                controls
+                className="w-full h-full object-contain"
+                preload="metadata"
+              >
+                <source src={post.videoUrl} type="video/mp4" />
+                O teu browser não suporta vídeo.
+              </video>
+              
+              {/* Badge de REEL */}
+              <div className="absolute top-2 right-2 flex gap-2">
+                <Badge className="bg-gradient-to-r from-purple-600 to-pink-600 text-white">
+                  🎬 REEL
+                </Badge>
+                <Badge className="bg-black/70 text-white">
+                  {post.duration}s
+                </Badge>
+              </div>
+              
+              {/* Badge de tipo de conteúdo */}
+              <div className="absolute top-2 left-2">
+                <Badge className="bg-green-600 text-white">
+                  💰 Vendas/CTA
+                </Badge>
+              </div>
+            </div>
+          ) : (
+            // IMAGEM
+            <div className="relative h-64 bg-gray-100">
               <img
                 src={post.imageUrl}
                 alt={post.hook}
-                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                className="w-full h-full object-cover"
               />
-              
-              {/* Overlay ao hover */}
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all duration-300 flex items-center justify-center">
-                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    className="bg-white hover:bg-gray-100"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedImage(post.imageUrl);
-                    }}
-                  >
-                    <Image className="w-4 h-4 mr-2" />
-                    Ver Completa
-                  </Button>
-                </div>
-              </div>
-
-              {/* Badge do tipo */}
-              <div className="absolute top-3 right-3">
+              <div className="absolute top-2 right-2 flex gap-2">
                 <Badge
                   className={
-                    post.type === "educational"
+                    post.contentType === "educational"
                       ? "bg-blue-600 text-white"
-                      : post.type === "viral"
-                      ? "bg-purple-600 text-white"
-                      : "bg-green-600 text-white"
+                      : "bg-purple-600 text-white"
                   }
                 >
-                  {post.type === "educational"
+                  {post.contentType === "educational"
                     ? "📚 Educativo"
-                    : post.type === "viral"
-                    ? "🔥 Viral"
-                    : "💰 Vendas"}
+                    : "🔥 Viral"}
                 </Badge>
               </div>
             </div>
           )}
 
-          {/* Conteúdo do Card */}
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between mb-4">
-              <Badge variant="outline" className="gap-1">
-                <Clock className="w-3 h-3" />
-                {post.bestTimeToPost}
-              </Badge>
-              <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
-                Publicar
+          {/* Conteúdo do Post */}
+          <div className="p-4">
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="text-xs">
+                  {post.bestTimeToPost}
+                </Badge>
+                <Badge variant="outline" className="text-xs">
+                  {post.mediaType === 'video' ? '9:16' : '1:1'}
+                </Badge>
+              </div>
+              <Button size="sm" className="bg-gradient-to-r from-blue-600 to-purple-600">
+                Publicar Agora
               </Button>
             </div>
 
-            <h3 className="font-bold text-lg mb-2 line-clamp-2 text-gray-900">
-              {post.hook}
-            </h3>
+            <h3 className="font-bold text-lg mb-2">{post.hook}</h3>
+            <p className="text-gray-700 mb-3 line-clamp-3">{post.caption}</p>
 
-            <p className="text-gray-600 text-sm mb-4 line-clamp-3">
-              {post.caption}
-            </p>
+            {/* Script do vídeo (se for reel) */}
+            {post.videoScript && (
+              <div className="mb-3 p-3 bg-purple-50 rounded-lg">
+                <p className="text-xs font-semibold text-purple-700 mb-1">
+                  📝 Script do Reel:
+                </p>
+                <p className="text-sm text-gray-700 line-clamp-2">
+                  {post.videoScript}
+                </p>
+              </div>
+            )}
 
-            <div className="flex flex-wrap gap-1 mb-4">
-              {post.hashtags?.slice(0, 3).map((tag: string, i: number) => (
-                <span key={i} className="text-xs text-blue-600">
-                  {tag}
+            {/* Hashtags */}
+            <div className="flex flex-wrap gap-2 mb-3">
+              {post.hashtags.slice(0, 5).map((tag: string, i: number) => (
+                <span key={i} className="text-sm text-blue-600">
+                  #{tag}
                 </span>
               ))}
-              {post.hashtags?.length > 3 && (
-                <span className="text-xs text-gray-400">
-                  +{post.hashtags.length - 3}
+            </div>
+
+            {/* Métricas */}
+            <div className="flex items-center gap-3 text-sm text-gray-600">
+              <span className="flex items-center gap-1">
+                <Target className="w-4 h-4" />
+                CTA: {post.cta}
+              </span>
+              <span className="flex items-center gap-1">
+                <TrendingUp className="w-4 h-4" />
+                Engagement: {post.estimatedEngagement}
+              </span>
+              {post.mediaType === 'video' && (
+                <span className="flex items-center gap-1">
+                  <Play className="w-4 h-4" />
+                  {post.duration}s
                 </span>
               )}
             </div>
-
-            <div className="flex items-center justify-between text-xs text-gray-500 pt-4 border-t">
-              <span className="flex items-center gap-1 line-clamp-1">
-                <Target className="w-3 h-3 flex-shrink-0" />
-                {post.cta}
-              </span>
-              <span className="flex items-center gap-1">
-                <TrendingUp className="w-3 h-3" />
-                {post.estimatedEngagement}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       ))}
-    </div>
-    
-    {/* Call to Action */}
-    <div className="mt-8 p-6 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
-      <div className="flex items-start gap-4">
-        <div className="flex-shrink-0 w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
-          <Calendar className="w-6 h-6 text-white" />
-        </div>
-        <div className="flex-1">
-          <h4 className="font-semibold text-gray-900 mb-1">
-            Gere o teu conteúdo no Content Hub
-          </h4>
-          <p className="text-sm text-gray-600 mb-4">
-            Calendário profissional, preview de redes sociais, análise de engagement e muito mais
-          </p>
-          <Button 
-            onClick={() => router.push('/content-hub')}
-            className="gap-2"
-          >
-            <Calendar className="w-4 h-4" />
-            Abrir Content Hub
-          </Button>
-        </div>
-      </div>
     </div>
   </CardContent>
 </Card>

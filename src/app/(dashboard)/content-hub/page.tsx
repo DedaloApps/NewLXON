@@ -1,15 +1,15 @@
 // src/app/(dashboard)/content-hub/page.tsx
 "use client";
 
-import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
-import { HeaderPremium } from '@/components/layout/Header';
+import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
+import { HeaderPremium } from "@/components/layout/Header";
 import { Toaster } from "@/components/ui/toaster";
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -25,19 +25,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { 
-  Calendar, 
-  Grid, 
-  Instagram, 
-  Facebook, 
-  Linkedin, 
+import {
+  Calendar,
+  Grid,
+  Instagram,
+  Facebook,
+  Linkedin,
   Twitter,
-  Clock, 
-  Edit, 
-  Trash2, 
-  Copy, 
-  Send, 
-  Loader2, 
+  Clock,
+  Edit,
+  Trash2,
+  Copy,
+  Send,
+  Loader2,
   Plus,
   Search,
   MoreVertical,
@@ -54,10 +54,10 @@ import {
   ChevronRight,
   AlertCircle,
   Sparkles,
-  PlusCircle
-} from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { useToast } from '@/hooks/use-toast';
+  PlusCircle,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -81,30 +81,32 @@ interface Post {
   scheduledAt?: string;
 }
 
-type Platform = 'instagram' | 'facebook' | 'linkedin' | 'twitter';
+type Platform = "instagram" | "facebook" | "linkedin" | "twitter";
 
 export default function ContentHubPage() {
   const router = useRouter();
   const { toast } = useToast();
   const { data: session } = useSession();
-  const [view, setView] = useState<'posts' | 'calendar'>('posts');
+  const [view, setView] = useState<"posts" | "calendar">("posts");
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filterStatus, setFilterStatus] = useState<'all' | 'scheduled' | 'draft' | 'published'>('all');
-  const [previewPlatform, setPreviewPlatform] = useState<Platform>('instagram');
-  
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterStatus, setFilterStatus] = useState<
+    "all" | "scheduled" | "draft" | "published"
+  >("all");
+  const [previewPlatform, setPreviewPlatform] = useState<Platform>("instagram");
+
   // Estados para criar post
   const [creating, setCreating] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [postType, setPostType] = useState("educational");
   const [topic, setTopic] = useState("");
   const [customPrompt, setCustomPrompt] = useState("");
-  
+
   // Estados para editor inline
   const [editingPost, setEditingPost] = useState<string | null>(null);
-  const [editedCaption, setEditedCaption] = useState('');
+  const [editedCaption, setEditedCaption] = useState("");
 
   useEffect(() => {
     loadPosts();
@@ -113,13 +115,31 @@ export default function ContentHubPage() {
   const loadPosts = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/posts/list');
+      console.log("📥 Carregando posts...");
+      const response = await fetch("/api/posts/list");
+
       if (response.ok) {
         const data = await response.json();
+        console.log(`✅ ${data.posts?.length || 0} posts recebidos`);
+
+        // Debug detalhado dos primeiros 3 posts
+        if (data.posts && data.posts.length > 0) {
+          data.posts.slice(0, 3).forEach((post: any, index: number) => {
+            console.log(`🔍 Post ${index + 1}:`, {
+              id: post.id,
+              title: post.title,
+              hasImage: !!post.image,
+              imageUrl: post.image?.substring(0, 100) + "...",
+            });
+          });
+        }
+
         setPosts(data.posts || []);
+      } else {
+        console.error("❌ Erro ao carregar posts:", response.status);
       }
     } catch (error) {
-      console.error('Erro ao carregar posts:', error);
+      console.error("❌ Erro ao carregar posts:", error);
       toast({
         title: "Erro",
         description: "Não foi possível carregar os posts",
@@ -143,47 +163,35 @@ export default function ContentHubPage() {
     setCreating(true);
 
     try {
-      const response = await axios.post("/api/posts/create", {
+      const response = await axios.post("/api/posts/create-with-visual-agent", {
         type: postType,
         topic: topic.trim(),
         customPrompt: customPrompt.trim() || undefined,
+        businessContext: {
+          niche: "Automaticamente detetado do onboarding",
+        },
       });
 
-      const newPost = response.data.post;
-      
-      // Formatar o post para o formato esperado
-      const formattedPost: Post = {
-        id: newPost.id,
-        title: newPost.hook || `Post ${newPost.type}`,
-        caption: newPost.caption || "",
-        type: newPost.type,
-        status: newPost.status,
-        image: newPost.imageUrl || "",
-        mediaUrls: newPost.imageUrl ? [newPost.imageUrl] : [],
-        date: "",
-        time: newPost.bestTimeToPost || "09:00",
-        platform: "instagram",
-        hashtags: newPost.hashtags || [],
-        scheduledAt: undefined,
-      };
+      // ✅ SOLUÇÃO: Apenas recarregar todos os posts da BD
+      await loadPosts(); // <-- Isto já traz o novo post
 
-      setPosts([formattedPost, ...posts]);
       setIsDialogOpen(false);
-      
+
       // Limpar form
       setTopic("");
       setCustomPrompt("");
       setPostType("educational");
 
       toast({
-        title: "Post criado com sucesso! 🎉",
-        description: "O teu novo post está pronto para ser publicado.",
+        title: "Post criado com IA! 🎉",
+        description: "Imagem profissional gerada e caption otimizada.",
       });
     } catch (error: any) {
       console.error("Erro ao criar post:", error);
       toast({
         title: "Erro ao criar post",
-        description: error.response?.data?.error || "Tenta novamente mais tarde.",
+        description:
+          error.response?.data?.error || "Tenta novamente mais tarde.",
         variant: "destructive",
       });
     } finally {
@@ -193,15 +201,15 @@ export default function ContentHubPage() {
 
   const startEditing = (post: Post) => {
     setEditingPost(post.id);
-    setEditedCaption(post.caption || post.title || '');
+    setEditedCaption(post.caption || post.title || "");
     setSelectedPost(post);
   };
 
   const saveEdit = async (postId: string) => {
     try {
       const response = await fetch(`/api/posts/${postId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ caption: editedCaption }),
       });
 
@@ -211,13 +219,15 @@ export default function ContentHubPage() {
           description: "As alterações foram guardadas com sucesso.",
         });
 
-        setPosts(posts.map(p => 
-          p.id === postId ? { ...p, caption: editedCaption } : p
-        ));
+        setPosts(
+          posts.map((p) =>
+            p.id === postId ? { ...p, caption: editedCaption } : p
+          )
+        );
 
         setEditingPost(null);
       } else {
-        throw new Error('Erro ao atualizar');
+        throw new Error("Erro ao atualizar");
       }
     } catch (error) {
       toast({
@@ -230,20 +240,55 @@ export default function ContentHubPage() {
 
   const cancelEdit = () => {
     setEditingPost(null);
-    setEditedCaption('');
+    setEditedCaption("");
   };
 
-  const filteredPosts = posts.filter(post => {
-    const matchesSearch = post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         post.caption?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesFilter = filterStatus === 'all' || post.status.toLowerCase() === filterStatus;
+  const handleDeletePost = async (postId: string) => {
+    try {
+      const response = await fetch(`/api/posts/${postId}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Post eliminado! 🗑️",
+          description: "O post foi removido com sucesso.",
+        });
+
+        // Remover post da lista
+        setPosts(posts.filter((p) => p.id !== postId));
+
+        // Se estava selecionado, remover seleção
+        if (selectedPost?.id === postId) {
+          setSelectedPost(null);
+        }
+      } else {
+        const data = await response.json();
+        throw new Error(data.error || "Erro ao eliminar");
+      }
+    } catch (error: any) {
+      console.error("Erro ao eliminar post:", error);
+      toast({
+        title: "Erro ao eliminar",
+        description: error.message || "Não foi possível eliminar o post.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const filteredPosts = posts.filter((post) => {
+    const matchesSearch =
+      post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      post.caption?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesFilter =
+      filterStatus === "all" || post.status.toLowerCase() === filterStatus;
     return matchesSearch && matchesFilter;
   });
 
   const stats = {
-    scheduled: posts.filter(p => p.status === 'SCHEDULED').length,
-    drafts: posts.filter(p => p.status === 'DRAFT').length,
-    published: posts.filter(p => p.status === 'PUBLISHED').length,
+    scheduled: posts.filter((p) => p.status === "SCHEDULED").length,
+    drafts: posts.filter((p) => p.status === "DRAFT").length,
+    published: posts.filter((p) => p.status === "PUBLISHED").length,
   };
 
   const handlePublish = (post: Post) => {
@@ -279,30 +324,30 @@ export default function ContentHubPage() {
 
             <div className="flex items-center gap-2">
               <Button
-                variant={filterStatus === 'all' ? 'default' : 'outline'}
+                variant={filterStatus === "all" ? "default" : "outline"}
                 size="sm"
-                onClick={() => setFilterStatus('all')}
+                onClick={() => setFilterStatus("all")}
               >
                 Todos ({posts.length})
               </Button>
               <Button
-                variant={filterStatus === 'scheduled' ? 'default' : 'outline'}
+                variant={filterStatus === "scheduled" ? "default" : "outline"}
                 size="sm"
-                onClick={() => setFilterStatus('scheduled')}
+                onClick={() => setFilterStatus("scheduled")}
               >
                 Agendados ({stats.scheduled})
               </Button>
               <Button
-                variant={filterStatus === 'draft' ? 'default' : 'outline'}
+                variant={filterStatus === "draft" ? "default" : "outline"}
                 size="sm"
-                onClick={() => setFilterStatus('draft')}
+                onClick={() => setFilterStatus("draft")}
               >
                 Rascunhos ({stats.drafts})
               </Button>
               <Button
-                variant={filterStatus === 'published' ? 'default' : 'outline'}
+                variant={filterStatus === "published" ? "default" : "outline"}
                 size="sm"
-                onClick={() => setFilterStatus('published')}
+                onClick={() => setFilterStatus("published")}
               >
                 Publicados ({stats.published})
               </Button>
@@ -310,12 +355,12 @@ export default function ContentHubPage() {
 
             <div className="flex items-center gap-2">
               <Button
-                variant={view === 'calendar' ? 'default' : 'outline'}
+                variant={view === "calendar" ? "default" : "outline"}
                 size="sm"
-                onClick={() => setView(view === 'posts' ? 'calendar' : 'posts')}
+                onClick={() => setView(view === "posts" ? "calendar" : "posts")}
                 className="gap-2"
               >
-                {view === 'posts' ? (
+                {view === "posts" ? (
                   <>
                     <Calendar className="w-4 h-4" />
                     Calendário
@@ -327,7 +372,7 @@ export default function ContentHubPage() {
                   </>
                 )}
               </Button>
-              
+
               {/* BOTÃO CRIAR POST COM MODAL */}
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogTrigger asChild>
@@ -343,14 +388,17 @@ export default function ContentHubPage() {
                       Criar Novo Post com IA
                     </DialogTitle>
                     <DialogDescription>
-                      A IA vai criar um post completo com imagem e texto otimizado
+                      A IA vai criar um post completo com imagem e texto
+                      otimizado
                     </DialogDescription>
                   </DialogHeader>
 
                   <div className="space-y-4 py-4">
                     {/* Tipo de Post */}
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Tipo de Post</label>
+                      <label className="text-sm font-medium">
+                        Tipo de Post
+                      </label>
                       <Select value={postType} onValueChange={setPostType}>
                         <SelectTrigger>
                           <SelectValue />
@@ -424,8 +472,8 @@ export default function ContentHubPage() {
                     >
                       {creating ? (
                         <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          A criar...
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />A
+                          criar...
                         </>
                       ) : (
                         <>
@@ -446,7 +494,7 @@ export default function ContentHubPage() {
         <div className="flex items-center justify-center min-h-[400px]">
           <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
         </div>
-      ) : view === 'calendar' ? (
+      ) : view === "calendar" ? (
         <CalendarView posts={filteredPosts} onSelectPost={setSelectedPost} />
       ) : (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -463,20 +511,24 @@ export default function ContentHubPage() {
                     <p className="text-gray-500 mb-6">
                       Começa a criar o teu primeiro post agora
                     </p>
-                    <Button onClick={() => setIsDialogOpen(true)} className="gap-2">
+                    <Button
+                      onClick={() => setIsDialogOpen(true)}
+                      className="gap-2"
+                    >
                       <Plus className="w-4 h-4" />
                       Criar Primeiro Post
                     </Button>
                   </CardContent>
                 </Card>
               ) : (
-                filteredPosts.map(post => (
+                filteredPosts.map((post) => (
                   <PostCard
                     key={post.id}
                     post={post}
                     onSelect={setSelectedPost}
                     isSelected={selectedPost?.id === post.id}
                     onPublish={handlePublish}
+                    onDelete={handleDeletePost} // ✅ Adicionar esta linha
                     editingPost={editingPost}
                     editedCaption={editedCaption}
                     setEditedCaption={setEditedCaption}
@@ -518,11 +570,12 @@ export default function ContentHubPage() {
 }
 
 // Post Card
-function PostCard({ 
-  post, 
-  onSelect, 
+function PostCard({
+  post,
+  onSelect,
   isSelected,
   onPublish,
+  onDelete, // ✅ Adicionar esta linha
   editingPost,
   editedCaption,
   setEditedCaption,
@@ -532,17 +585,21 @@ function PostCard({
 }: any) {
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'SCHEDULED': return 'bg-blue-100 text-blue-700 border-blue-200';
-      case 'PUBLISHED': return 'bg-green-100 text-green-700 border-green-200';
-      case 'DRAFT': return 'bg-gray-100 text-gray-700 border-gray-200';
-      default: return 'bg-gray-100 text-gray-700 border-gray-200';
+      case "SCHEDULED":
+        return "bg-blue-100 text-blue-700 border-blue-200";
+      case "PUBLISHED":
+        return "bg-green-100 text-green-700 border-green-200";
+      case "DRAFT":
+        return "bg-gray-100 text-gray-700 border-gray-200";
+      default:
+        return "bg-gray-100 text-gray-700 border-gray-200";
     }
   };
 
   return (
-    <Card 
+    <Card
       className={`cursor-pointer transition-all hover:shadow-lg ${
-        isSelected ? 'ring-2 ring-blue-500 shadow-lg' : ''
+        isSelected ? "ring-2 ring-blue-500 shadow-lg" : ""
       }`}
       onClick={() => onSelect(post)}
     >
@@ -550,7 +607,29 @@ function PostCard({
         <div className="flex gap-4">
           <div className="relative w-24 h-24 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
             {post.image ? (
-              <img src={post.image} alt={post.title} className="w-full h-full object-cover" />
+              <img
+      src={post.image}
+      alt={post.title}
+      className="w-full h-full object-cover"
+      onError={(e) => {
+        console.error("❌ Erro ao carregar imagem:", {
+          postId: post.id,
+          imageUrl: post.image,
+        });
+        // Esconder imagem quebrada e mostrar placeholder
+        e.currentTarget.style.display = "none";
+        const parent = e.currentTarget.parentElement;
+        if (parent) {
+          parent.innerHTML = `
+            <div class="w-full h-full flex items-center justify-center">
+              <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+              </svg>
+            </div>
+          `;
+        }
+      }}
+    />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
                 <ImageIcon className="w-8 h-8 text-gray-400" />
@@ -565,7 +644,9 @@ function PostCard({
 
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2 mb-2">
-              <h3 className="font-semibold text-gray-900 line-clamp-1">{post.title}</h3>
+              <h3 className="font-semibold text-gray-900 line-clamp-1">
+                {post.title}
+              </h3>
               <div className="flex items-center gap-1">
                 <Button
                   variant="ghost"
@@ -579,12 +660,12 @@ function PostCard({
                   <Send className="w-4 h-4" />
                   <span className="hidden sm:inline">Publicar</span>
                 </Button>
-                
+
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       className="h-8 w-8 p-0"
                       onClick={(e) => e.stopPropagation()}
                     >
@@ -592,26 +673,34 @@ function PostCard({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={(e) => {
-                      e.stopPropagation();
-                      startEditing(post);
-                    }}>
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        startEditing(post);
+                      }}
+                    >
                       <Edit className="w-4 h-4 mr-2" />
                       Editar Caption
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={(e) => {
-                      e.stopPropagation();
-                      alert('Duplicar post');
-                    }}>
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        alert("Duplicar post");
+                      }}
+                    >
                       <Copy className="w-4 h-4 mr-2" />
                       Duplicar
                     </DropdownMenuItem>
-                    <DropdownMenuItem 
+                    <DropdownMenuItem
                       className="text-red-600"
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (confirm('Tens a certeza que queres eliminar este post?')) {
-                          alert('Post eliminado');
+                        if (
+                          confirm(
+                            "Tens a certeza que queres eliminar este post? Esta ação não pode ser revertida."
+                          )
+                        ) {
+                          onDelete(post.id); // ✅ Chamar função de delete
                         }
                       }}
                     >
@@ -658,7 +747,7 @@ function PostCard({
                 </div>
               </div>
             ) : (
-              <p 
+              <p
                 className="text-sm text-gray-600 line-clamp-2 mb-3 cursor-text hover:bg-gray-50 p-2 rounded transition-colors"
                 onDoubleClick={(e) => {
                   e.stopPropagation();
@@ -672,11 +761,11 @@ function PostCard({
 
             <div className="flex items-center gap-2 flex-wrap">
               <Badge className={getStatusColor(post.status)}>
-                {post.status === 'SCHEDULED' && '📅 Agendado'}
-                {post.status === 'PUBLISHED' && '✅ Publicado'}
-                {post.status === 'DRAFT' && '📝 Rascunho'}
+                {post.status === "SCHEDULED" && "📅 Agendado"}
+                {post.status === "PUBLISHED" && "✅ Publicado"}
+                {post.status === "DRAFT" && "📝 Rascunho"}
               </Badge>
-              
+
               {post.date && post.time && (
                 <Badge variant="outline" className="gap-1">
                   <Clock className="w-3 h-3" />
@@ -697,16 +786,26 @@ function PostCard({
 }
 
 // 📅 CALENDAR VIEW
-function CalendarView({ posts, onSelectPost }: { posts: Post[]; onSelectPost: (post: Post) => void }) {
+function CalendarView({
+  posts,
+  onSelectPost,
+}: {
+  posts: Post[];
+  onSelectPost: (post: Post) => void;
+}) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
   const goToPreviousMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+    setCurrentDate(
+      new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1)
+    );
   };
 
   const goToNextMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+    setCurrentDate(
+      new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1)
+    );
   };
 
   const goToToday = () => {
@@ -742,9 +841,9 @@ function CalendarView({ posts, onSelectPost }: { posts: Post[]; onSelectPost: (p
   };
 
   const getPostsForDay = (date: Date) => {
-    return posts.filter(post => {
+    return posts.filter((post) => {
       if (!post.scheduledAt && !post.date) return false;
-      const postDate = post.scheduledAt 
+      const postDate = post.scheduledAt
         ? new Date(post.scheduledAt)
         : new Date(post.date);
       return (
@@ -756,7 +855,10 @@ function CalendarView({ posts, onSelectPost }: { posts: Post[]; onSelectPost: (p
   };
 
   const days = getDaysInMonth();
-  const monthName = currentDate.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' });
+  const monthName = currentDate.toLocaleDateString("pt-PT", {
+    month: "long",
+    year: "numeric",
+  });
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const selectedDayPosts = selectedDate ? getPostsForDay(selectedDate) : [];
@@ -768,10 +870,18 @@ function CalendarView({ posts, onSelectPost }: { posts: Post[]; onSelectPost: (p
           <Card>
             <CardHeader className="border-b">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-xl capitalize">{monthName}</CardTitle>
+                <CardTitle className="text-xl capitalize">
+                  {monthName}
+                </CardTitle>
                 <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" onClick={goToToday}>Hoje</Button>
-                  <Button variant="outline" size="sm" onClick={goToPreviousMonth}>
+                  <Button variant="outline" size="sm" onClick={goToToday}>
+                    Hoje
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={goToPreviousMonth}
+                  >
                     <ChevronLeft className="w-4 h-4" />
                   </Button>
                   <Button variant="outline" size="sm" onClick={goToNextMonth}>
@@ -782,18 +892,25 @@ function CalendarView({ posts, onSelectPost }: { posts: Post[]; onSelectPost: (p
             </CardHeader>
             <CardContent className="p-4">
               <div className="grid grid-cols-7 gap-2 mb-2">
-                {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(day => (
-                  <div key={day} className="text-center text-xs font-semibold text-gray-600 py-2">
-                    {day}
-                  </div>
-                ))}
+                {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map(
+                  (day) => (
+                    <div
+                      key={day}
+                      className="text-center text-xs font-semibold text-gray-600 py-2"
+                    >
+                      {day}
+                    </div>
+                  )
+                )}
               </div>
 
               <div className="grid grid-cols-7 gap-2">
                 {days.map((day, index) => {
                   const dayPosts = getPostsForDay(day.date);
                   const isToday = day.date.getTime() === today.getTime();
-                  const isSelected = selectedDate && day.date.getTime() === selectedDate.getTime();
+                  const isSelected =
+                    selectedDate &&
+                    day.date.getTime() === selectedDate.getTime();
                   const isPast = day.date < today;
 
                   return (
@@ -802,19 +919,34 @@ function CalendarView({ posts, onSelectPost }: { posts: Post[]; onSelectPost: (p
                       onClick={() => setSelectedDate(day.date)}
                       className={`
                         min-h-[80px] p-2 rounded-lg border-2 transition-all text-left
-                        ${!day.isCurrentMonth ? 'bg-gray-50 text-gray-400' : 'bg-white'}
-                        ${isToday ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}
-                        ${isSelected ? 'ring-2 ring-blue-500' : ''}
-                        ${isPast && day.isCurrentMonth ? 'opacity-60' : ''}
+                        ${
+                          !day.isCurrentMonth
+                            ? "bg-gray-50 text-gray-400"
+                            : "bg-white"
+                        }
+                        ${
+                          isToday
+                            ? "border-blue-500 bg-blue-50"
+                            : "border-gray-200"
+                        }
+                        ${isSelected ? "ring-2 ring-blue-500" : ""}
+                        ${isPast && day.isCurrentMonth ? "opacity-60" : ""}
                         hover:border-blue-300 hover:shadow-md
                       `}
                     >
                       <div className="flex items-center justify-between mb-1">
-                        <span className={`text-sm font-semibold ${isToday ? 'text-blue-600' : ''}`}>
+                        <span
+                          className={`text-sm font-semibold ${
+                            isToday ? "text-blue-600" : ""
+                          }`}
+                        >
                           {day.date.getDate()}
                         </span>
                         {dayPosts.length > 0 && (
-                          <Badge variant="secondary" className="text-xs h-5 px-1">
+                          <Badge
+                            variant="secondary"
+                            className="text-xs h-5 px-1"
+                          >
                             {dayPosts.length}
                           </Badge>
                         )}
@@ -825,14 +957,15 @@ function CalendarView({ posts, onSelectPost }: { posts: Post[]; onSelectPost: (p
                           <div
                             key={idx}
                             className={`text-xs p-1 rounded truncate ${
-                              post.status === 'SCHEDULED'
-                                ? 'bg-blue-100 text-blue-700'
-                                : post.status === 'PUBLISHED'
-                                ? 'bg-green-100 text-green-700'
-                                : 'bg-gray-100 text-gray-700'
+                              post.status === "SCHEDULED"
+                                ? "bg-blue-100 text-blue-700"
+                                : post.status === "PUBLISHED"
+                                ? "bg-green-100 text-green-700"
+                                : "bg-gray-100 text-gray-700"
                             }`}
                           >
-                            {post.time} • {post.platform === 'instagram' ? '📸' : '💙'}
+                            {post.time} •{" "}
+                            {post.platform === "instagram" ? "📸" : "💙"}
                           </div>
                         ))}
                         {dayPosts.length > 2 && (
@@ -873,9 +1006,12 @@ function CalendarView({ posts, onSelectPost }: { posts: Post[]; onSelectPost: (p
             <CardHeader className="border-b">
               <CardTitle className="text-lg">
                 {selectedDate ? (
-                  <>Posts de {selectedDate.getDate()}/{selectedDate.getMonth() + 1}</>
+                  <>
+                    Posts de {selectedDate.getDate()}/
+                    {selectedDate.getMonth() + 1}
+                  </>
                 ) : (
-                  'Seleciona um dia'
+                  "Seleciona um dia"
                 )}
               </CardTitle>
             </CardHeader>
@@ -883,7 +1019,7 @@ function CalendarView({ posts, onSelectPost }: { posts: Post[]; onSelectPost: (p
               {selectedDate ? (
                 selectedDayPosts.length > 0 ? (
                   <div className="space-y-3">
-                    {selectedDayPosts.map(post => (
+                    {selectedDayPosts.map((post) => (
                       <div
                         key={post.id}
                         onClick={() => onSelectPost(post)}
@@ -891,7 +1027,11 @@ function CalendarView({ posts, onSelectPost }: { posts: Post[]; onSelectPost: (p
                       >
                         <div className="flex items-start gap-3">
                           {post.image ? (
-                            <img src={post.image} alt={post.title} className="w-16 h-16 rounded object-cover" />
+                            <img
+                              src={post.image}
+                              alt={post.title}
+                              className="w-16 h-16 rounded object-cover"
+                            />
                           ) : (
                             <div className="w-16 h-16 rounded bg-gray-100 flex items-center justify-center">
                               <ImageIcon className="w-6 h-6 text-gray-400" />
@@ -899,15 +1039,30 @@ function CalendarView({ posts, onSelectPost }: { posts: Post[]; onSelectPost: (p
                           )}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
-                              <Badge variant={post.status === 'SCHEDULED' ? 'default' : post.status === 'PUBLISHED' ? 'default' : 'secondary'} className="text-xs">
-                                {post.status === 'SCHEDULED' && '📅'}
-                                {post.status === 'PUBLISHED' && '✅'}
-                                {post.status === 'DRAFT' && '📝'}
+                              <Badge
+                                variant={
+                                  post.status === "SCHEDULED"
+                                    ? "default"
+                                    : post.status === "PUBLISHED"
+                                    ? "default"
+                                    : "secondary"
+                                }
+                                className="text-xs"
+                              >
+                                {post.status === "SCHEDULED" && "📅"}
+                                {post.status === "PUBLISHED" && "✅"}
+                                {post.status === "DRAFT" && "📝"}
                               </Badge>
-                              <span className="text-xs text-gray-500">{post.time}</span>
+                              <span className="text-xs text-gray-500">
+                                {post.time}
+                              </span>
                             </div>
-                            <h4 className="font-semibold text-sm line-clamp-1">{post.title}</h4>
-                            <p className="text-xs text-gray-600 line-clamp-2 mt-1">{post.caption}</p>
+                            <h4 className="font-semibold text-sm line-clamp-1">
+                              {post.title}
+                            </h4>
+                            <p className="text-xs text-gray-600 line-clamp-2 mt-1">
+                              {post.caption}
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -916,8 +1071,15 @@ function CalendarView({ posts, onSelectPost }: { posts: Post[]; onSelectPost: (p
                 ) : (
                   <div className="py-12 text-center">
                     <AlertCircle className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-                    <p className="text-sm text-gray-500">Nenhum post agendado para este dia</p>
-                    <Button variant="outline" size="sm" className="mt-4" onClick={() => alert('Criar post para este dia')}>
+                    <p className="text-sm text-gray-500">
+                      Nenhum post agendado para este dia
+                    </p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-4"
+                      onClick={() => alert("Criar post para este dia")}
+                    >
                       <Plus className="w-4 h-4 mr-2" />
                       Agendar Post
                     </Button>
@@ -926,7 +1088,9 @@ function CalendarView({ posts, onSelectPost }: { posts: Post[]; onSelectPost: (p
               ) : (
                 <div className="py-12 text-center">
                   <Calendar className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-                  <p className="text-sm text-gray-500">Clica num dia do calendário para ver os posts agendados</p>
+                  <p className="text-sm text-gray-500">
+                    Clica num dia do calendário para ver os posts agendados
+                  </p>
                 </div>
               )}
             </CardContent>
@@ -938,12 +1102,42 @@ function CalendarView({ posts, onSelectPost }: { posts: Post[]; onSelectPost: (p
 }
 
 // Multi-Platform Preview
-function MultiPlatformPreview({ post, platform, onPlatformChange, onClose }: { post: Post; platform: Platform; onPlatformChange: (platform: Platform) => void; onClose: () => void; }) {
+function MultiPlatformPreview({
+  post,
+  platform,
+  onPlatformChange,
+  onClose,
+}: {
+  post: Post;
+  platform: Platform;
+  onPlatformChange: (platform: Platform) => void;
+  onClose: () => void;
+}) {
   const platforms = [
-    { id: 'instagram' as Platform, icon: Instagram, name: 'Instagram', color: 'text-pink-600' },
-    { id: 'facebook' as Platform, icon: Facebook, name: 'Facebook', color: 'text-blue-600' },
-    { id: 'linkedin' as Platform, icon: Linkedin, name: 'LinkedIn', color: 'text-blue-700' },
-    { id: 'twitter' as Platform, icon: Twitter, name: 'X', color: 'text-gray-900' },
+    {
+      id: "instagram" as Platform,
+      icon: Instagram,
+      name: "Instagram",
+      color: "text-pink-600",
+    },
+    {
+      id: "facebook" as Platform,
+      icon: Facebook,
+      name: "Facebook",
+      color: "text-blue-600",
+    },
+    {
+      id: "linkedin" as Platform,
+      icon: Linkedin,
+      name: "LinkedIn",
+      color: "text-blue-700",
+    },
+    {
+      id: "twitter" as Platform,
+      icon: Twitter,
+      name: "X",
+      color: "text-gray-900",
+    },
   ];
 
   return (
@@ -963,10 +1157,16 @@ function MultiPlatformPreview({ post, platform, onPlatformChange, onClose }: { p
                 key={p.id}
                 onClick={() => onPlatformChange(p.id)}
                 className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-all ${
-                  platform === p.id ? 'bg-blue-50 ring-2 ring-blue-500' : 'bg-gray-50 hover:bg-gray-100'
+                  platform === p.id
+                    ? "bg-blue-50 ring-2 ring-blue-500"
+                    : "bg-gray-50 hover:bg-gray-100"
                 }`}
               >
-                <Icon className={`w-5 h-5 ${platform === p.id ? p.color : 'text-gray-400'}`} />
+                <Icon
+                  className={`w-5 h-5 ${
+                    platform === p.id ? p.color : "text-gray-400"
+                  }`}
+                />
                 <span className="text-xs font-medium">{p.name}</span>
               </button>
             );
@@ -974,10 +1174,10 @@ function MultiPlatformPreview({ post, platform, onPlatformChange, onClose }: { p
         </div>
       </CardHeader>
       <CardContent className="p-4">
-        {platform === 'instagram' && <InstagramPreview post={post} />}
-        {platform === 'facebook' && <FacebookPreview post={post} />}
-        {platform === 'linkedin' && <LinkedInPreview post={post} />}
-        {platform === 'twitter' && <TwitterPreview post={post} />}
+        {platform === "instagram" && <InstagramPreview post={post} />}
+        {platform === "facebook" && <FacebookPreview post={post} />}
+        {platform === "linkedin" && <LinkedInPreview post={post} />}
+        {platform === "twitter" && <TwitterPreview post={post} />}
       </CardContent>
     </Card>
   );
@@ -997,7 +1197,11 @@ function InstagramPreview({ post }: { post: Post }) {
       </div>
       <div className="aspect-square bg-gray-100">
         {post.image ? (
-          <img src={post.image} alt={post.title} className="w-full h-full object-cover" />
+          <img
+            src={post.image}
+            alt={post.title}
+            className="w-full h-full object-cover"
+          />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
             <Instagram className="w-16 h-16 text-gray-400" />
@@ -1015,15 +1219,18 @@ function InstagramPreview({ post }: { post: Post }) {
         </div>
         <div className="text-sm font-semibold">1,234 gostos</div>
         <div className="text-sm">
-          <span className="font-semibold">seu_perfil</span> {post.caption || post.title}
+          <span className="font-semibold">seu_perfil</span>{" "}
+          {post.caption || post.title}
         </div>
         {post.hashtags && post.hashtags.length > 0 && (
           <div className="text-sm text-blue-600">
-            {post.hashtags.map(tag => `${tag}`).join(' ')}
+            {post.hashtags.map((tag) => `${tag}`).join(" ")}
           </div>
         )}
         <div className="text-xs text-gray-500">
-          {post.scheduledAt ? new Date(post.scheduledAt).toLocaleDateString('pt-PT') : 'Agora'}
+          {post.scheduledAt
+            ? new Date(post.scheduledAt).toLocaleDateString("pt-PT")
+            : "Agora"}
         </div>
       </div>
     </div>
@@ -1040,7 +1247,10 @@ function FacebookPreview({ post }: { post: Post }) {
           <div className="flex-1">
             <div className="font-semibold text-sm">Seu Nome</div>
             <div className="text-xs text-gray-500">
-              {post.scheduledAt ? new Date(post.scheduledAt).toLocaleDateString('pt-PT') : 'Agora'} • 🌍
+              {post.scheduledAt
+                ? new Date(post.scheduledAt).toLocaleDateString("pt-PT")
+                : "Agora"}{" "}
+              • 🌍
             </div>
           </div>
           <MoreVertical className="w-5 h-5 text-gray-600" />
@@ -1049,7 +1259,11 @@ function FacebookPreview({ post }: { post: Post }) {
       </div>
       {post.image && (
         <div className="aspect-video bg-gray-100">
-          <img src={post.image} alt={post.title} className="w-full h-full object-cover" />
+          <img
+            src={post.image}
+            alt={post.title}
+            className="w-full h-full object-cover"
+          />
         </div>
       )}
       <div className="p-3 flex items-center justify-around border-t">
@@ -1078,7 +1292,10 @@ function LinkedInPreview({ post }: { post: Post }) {
             <div className="font-semibold text-sm">Seu Nome</div>
             <div className="text-xs text-gray-500">Cargo • Empresa</div>
             <div className="text-xs text-gray-500">
-              {post.scheduledAt ? new Date(post.scheduledAt).toLocaleDateString('pt-PT') : 'Agora'} • 🌍
+              {post.scheduledAt
+                ? new Date(post.scheduledAt).toLocaleDateString("pt-PT")
+                : "Agora"}{" "}
+              • 🌍
             </div>
           </div>
           <MoreVertical className="w-5 h-5 text-gray-600" />
@@ -1087,7 +1304,11 @@ function LinkedInPreview({ post }: { post: Post }) {
       </div>
       {post.image && (
         <div className="aspect-video bg-gray-100">
-          <img src={post.image} alt={post.title} className="w-full h-full object-cover" />
+          <img
+            src={post.image}
+            alt={post.title}
+            className="w-full h-full object-cover"
+          />
         </div>
       )}
       <div className="p-3 flex items-center justify-around border-t">
@@ -1118,7 +1339,9 @@ function TwitterPreview({ post }: { post: Post }) {
               <span className="text-gray-500 text-sm">@seuperfil</span>
               <span className="text-gray-500 text-sm">·</span>
               <span className="text-gray-500 text-sm">
-                {post.scheduledAt ? new Date(post.scheduledAt).toLocaleDateString('pt-PT') : 'agora'}
+                {post.scheduledAt
+                  ? new Date(post.scheduledAt).toLocaleDateString("pt-PT")
+                  : "agora"}
               </span>
             </div>
             <div className="text-sm mb-3">{post.caption || post.title}</div>

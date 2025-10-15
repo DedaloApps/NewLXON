@@ -90,10 +90,10 @@ model Post {
   userId          String
   socialAccountId String?
   
-  type            String // SINGLE, CAROUSEL, VIDEO, REEL, STORY (ou educational, viral, sales, engagement para posts da IA)
+  type            String // EDUCATIONAL, VIRAL, SALES, ENGAGEMENT, SINGLE, CAROUSEL, VIDEO, REEL, STORY
   status          String @default("DRAFT") // DRAFT, SCHEDULED, PUBLISHING, PUBLISHED, FAILED
   
-  caption         String?
+  caption         String    // 🔧 Obrigatório (sem ?)
   hashtags        String? // JSON array as string
   location        String?
   
@@ -101,6 +101,7 @@ model Post {
   hook                String? // Hook impactante do post
   cta                 String? // Call to action
   imagePrompt         String? // Prompt usado para gerar a imagem
+  imageUrl            String? // 🆕 URL da imagem gerada
   estimatedEngagement String? // alto, médio, baixo
   bestTimeToPost      String? // HH:MM formato 24h
   
@@ -109,6 +110,8 @@ model Post {
   
   mediaUrls       String? // JSON array as string
   thumbnailUrl    String?
+  
+  platform        String @default("INSTAGRAM") // 🆕 Plataforma de publicação
   
   scheduledAt     DateTime?
   publishedAt     DateTime?

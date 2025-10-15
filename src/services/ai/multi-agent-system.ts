@@ -1,15 +1,17 @@
 // src/services/ai/multi-agent-system.ts
-import OpenAI from 'openai';
-import { imageGenerationService } from '@/services/media/image-generation.service';
-import { imageStorageService } from '@/services/media/image-storage.service';
-import { heygenVideoService } from '@/services/media/heygen-video.service';
+import OpenAI from "openai";
+import { imageGenerationService } from "@/services/media/image-generation.service";
+import { imageStorageService } from "@/services/media/image-storage.service";
+import { heygenVideoService } from "@/services/media/heygen-video.service";
+import { runwayVideoService } from "@/services/media/runway-video.service";
 
 // Import condicional do video service antigo para evitar erros se não existir
 let videoGenerationService: any;
 try {
-  videoGenerationService = require('@/services/media/video-generation.service').videoGenerationService;
+  videoGenerationService =
+    require("@/services/media/video-generation.service").videoGenerationService;
 } catch (e) {
-  console.warn('Video generation service não encontrado');
+  console.warn("Video generation service não encontrado");
   videoGenerationService = null;
 }
 
@@ -46,10 +48,14 @@ Pensas como um estratega de marketing sénior com 10+ anos de experiência.`;
     const prompt = `Cria uma estratégia de conteúdo completa para:
     
 Negócio: ${data.niche}
-Público-alvo: ${data.audience || 'Não especificado'}
-${data.audienceDetails ? `Detalhes: ${JSON.stringify(data.audienceDetails)}` : ''}
+Público-alvo: ${data.audience || "Não especificado"}
+${
+  data.audienceDetails
+    ? `Detalhes: ${JSON.stringify(data.audienceDetails)}`
+    : ""
+}
 Objetivo: ${data.objective}
-Plataformas: ${data.platforms.join(', ')}
+Plataformas: ${data.platforms.join(", ")}
 Tom de voz: ${data.tone}
 Modo de publicação: ${data.autoPosting}
 
@@ -88,18 +94,18 @@ Retorna JSON com:
 }`;
 
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4-turbo-preview',
+      model: "gpt-4-turbo-preview",
       messages: [
-        { role: 'system', content: this.systemPrompt },
-        { role: 'user', content: prompt },
+        { role: "system", content: this.systemPrompt },
+        { role: "user", content: prompt },
       ],
       temperature: 0.7,
-      response_format: { type: 'json_object' },
+      response_format: { type: "json_object" },
     });
 
     return {
-      agent: 'StrategyAgent',
-      result: JSON.parse(completion.choices[0].message.content || '{}'),
+      agent: "StrategyAgent",
+      result: JSON.parse(completion.choices[0].message.content || "{}"),
       tokensUsed: completion.usage?.total_tokens || 0,
       timestamp: new Date(),
     };
@@ -107,7 +113,7 @@ Retorna JSON com:
 }
 
 // ==========================
-// 2. CONTENT AGENT PREMIUM 🔥
+// 2. CONTENT AGENT PREMIUM 🔥 + VISUAL PROMPT INTEGRATION
 // ==========================
 class ContentAgent {
   private systemPrompt = `Tu és o Content Agent PREMIUM, especialista em copywriting viral para Instagram.
@@ -159,17 +165,52 @@ EXEMPLOS DE HOOKS FORTES:
 IMPORTANTE - PORTUGUÊS DE PORTUGAL:
 - SEMPRE usa "tu", "teu", "contigo" (NUNCA "você", "seu", "consigo")
 - Usa expressões portuguesas: "fixe", "espetacular", "brutal"
-- Tom direto: "Olá!", "Vê isto", "Experimenta", "Atenção"
-
-CRÍTICO PARA IMAGENS - PARECER FOTOS REAIS:
-Prompts devem descrever fotos REAIS com smartphone:
-✅ "Real person shot on iPhone, natural lighting, candid moment"
-❌ "Perfect model, studio lighting, professional photography"`;
+- Tom direto: "Olá!", "Vê isto", "Experimenta", "Atenção"`;
 
   async generateInitialPosts(
     data: OnboardingData,
     strategy: any
   ): Promise<AgentResponse<any>> {
+    // 🆕 PASSO 1: GERAR PROMPTS VISUAIS ULTRA-PROFISSIONAIS PRIMEIRO
+    console.log(
+      "🎨 A gerar prompts visuais profissionais específicos para o negócio..."
+    );
+
+    let visualPrompts;
+    try {
+      const { visualPromptAgent } = await import("./visual-prompt-agent");
+      visualPrompts = await visualPromptAgent.generateInitialPostPrompts({
+        business: data.niche.split(" - ")[0] || data.niche,
+        businessDescription: data.niche,
+        audience: data.audience || "público geral",
+        objective: data.objective,
+        tone: data.tone,
+      });
+      console.log("✅ Prompts visuais profissionais gerados!");
+      console.log(
+        "📸 Educational:",
+        visualPrompts.educational.substring(0, 100) + "..."
+      );
+      console.log("🔥 Viral:", visualPrompts.viral.substring(0, 100) + "...");
+      console.log("💰 Sales:", visualPrompts.sales.substring(0, 100) + "...");
+    } catch (error) {
+      console.warn(
+        "⚠️ Visual Prompt Agent não disponível, usando prompts genéricos"
+      );
+      visualPrompts = {
+        educational: `Professional product photography of ${
+          data.niche.split(" - ")[0]
+        }, natural lighting, high detail, commercial quality`,
+        viral: `Real person using ${
+          data.niche.split(" - ")[0]
+        }, candid moment, natural lighting, authentic emotion`,
+        sales: `Premium showcase of ${
+          data.niche.split(" - ")[0]
+        }, professional setup, studio lighting, aspirational aesthetic`,
+      };
+    }
+
+    // 🆕 PASSO 2: GERAR CAPTIONS SEM MENCIONAR OS PROMPTS VISUAIS
     const prompt = `Cria 3 posts iniciais PREMIUM (nota 9-10) para Instagram:
 
 CONTEXTO:
@@ -177,7 +218,7 @@ CONTEXTO:
 - Objetivo: ${data.objective}
 - Tom: ${data.tone}
 - Plataforma: ${data.platforms[0]}
-- Pilares: ${strategy.contentPillars.map((p: any) => p.name).join(', ')}
+- Pilares: ${strategy.contentPillars.map((p: any) => p.name).join(", ")}
 
 POSTS REQUERIDOS (nesta ordem):
 1. POST COM IMAGEM - EDUCATIVO (ensina algo valioso)
@@ -191,7 +232,7 @@ REQUISITOS OBRIGATÓRIOS (para nota 10):
 ✅ CTA claro e específico
 ✅ 10 hashtags (5 nicho + 3 médio + 2 alto)
 ✅ Tom conversacional PT-PT
-✅ Zero clichês
+✅ Zero clichés
 
 ESTRUTURA DA CAPTION (OBRIGATÓRIA):
 🎯 HOOK impactante (1 linha)
@@ -226,7 +267,6 @@ FORMATO JSON:
       "caption": "Caption COMPLETA 125-150 palavras seguindo ESTRUTURA OBRIGATÓRIA acima. IMPORTANTE: Deve ser um texto corrido natural, não pode ter marcadores tipo '[Linha em branco]', '[Storytelling]', etc. Apenas o texto final pronto a publicar com quebras de linha reais.",
       "hashtags": ["tag1", "tag2", "tag3", "tag4", "tag5", "tag6", "tag7", "tag8", "tag9", "tag10"],
       "cta": "CTA específico PT-PT",
-      "imagePrompt": "Real Portuguese [pessoa do nicho] in authentic [local], shot on iPhone 15, natural lighting, casual clothes, candid moment, natural skin texture, relaxed expression, slightly grainy, unposed, real environment",
       "estimatedEngagement": "alto",
       "bestTimeToPost": "09:00",
       "wordCount": 135,
@@ -240,7 +280,6 @@ FORMATO JSON:
       "caption": "Caption COMPLETA 125-150 palavras com storytelling emocional. Texto final pronto, sem marcadores.",
       "hashtags": ["tag1", "tag2", "tag3", "tag4", "tag5", "tag6", "tag7", "tag8", "tag9", "tag10"],
       "cta": "CTA para comentário ou partilha PT-PT",
-      "imagePrompt": "Real person in [situação relatable], shot on smartphone, natural moment, authentic emotion, candid photography",
       "estimatedEngagement": "muito alto",
       "bestTimeToPost": "13:00",
       "wordCount": 140,
@@ -254,8 +293,7 @@ FORMATO JSON:
       "caption": "Caption de CONVERSÃO 125-150 palavras. Storytelling que leva ao CTA forte. Texto final pronto.",
       "hashtags": ["reels", "tag2", "tag3", "tag4", "tag5", "tag6", "tag7", "tag8", "tag9", "tag10"],
       "cta": "Link na bio / Envia DM PT-PT",
-      "videoScript": "Script detalhado 30-45 segundos EM PT-PT:\n\n[0-5s] INTRO - Hook visual + verbal\n[5-15s] PROBLEMA - Dor que o público sente\n[15-30s] SOLUÇÃO - Como resolver (teu produto/serviço)\n[30-45s] CTA - Ação específica clara\n\nTexto completo do que dizer em cada parte, em PT-PT conversacional.",
-      "imagePrompt": "Real Portuguese person in [contexto vendas], shot on iPhone, natural lighting, professional but casual",
+      "videoScript": "Script detalhado 30-45 segundos EM PT-PT:\\n\\n[0-5s] INTRO - Hook visual + verbal\\n[5-15s] PROBLEMA - Dor que o público sente\\n[15-30s] SOLUÇÃO - Como resolver (teu produto/serviço)\\n[30-45s] CTA - Ação específica clara\\n\\nTexto completo do que dizer em cada parte, em PT-PT conversacional.",
       "estimatedEngagement": "muito alto",
       "bestTimeToPost": "19:00",
       "wordCount": 145,
@@ -265,62 +303,75 @@ FORMATO JSON:
   ]
 }
 
-CRÍTICO: Cada caption DEVE ser texto FINAL pronto a copiar/colar. Não incluir [instruções], [Storytelling], etc. Apenas o texto real com emojis e quebras de linha.
-
-EXEMPLO DE CAPTION BOA:
-"🚀 Isto mudou completamente o meu negócio
-
-Há 6 meses estava a trabalhar 12 horas por dia. Acordava às 6h, dormia à meia-noite. Zero resultados.
-
-Até que descobri este sistema. Em 30 dias, dobrei os resultados com metade do esforço. Sim, é possível.
-
-O segredo? Foco nas 3 tarefas certas. Não trabalhar mais, trabalhar melhor.
-
-💬 Comenta FOCO se também queres saber quais são
-
-#empreendedorismo #produtividade #negociosonline #marketingdigital #sucessodigital #trabalhointeligente #focoemresultados #crescimento #estrategia #portugal"
+CRÍTICO: 
+- Cada caption DEVE ser texto FINAL pronto a copiar/colar
+- NÃO incluir [instruções], [Storytelling], [Linha em branco], etc
+- Apenas o texto real com emojis e quebras de linha naturais
 
 IMPORTANTE: Gera SEMPRE 3 posts completos. Se não gerar os 3, refaz.`;
 
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4-turbo-preview',
+      model: "gpt-4-turbo-preview",
       messages: [
-        { role: 'system', content: this.systemPrompt },
-        { role: 'user', content: prompt },
+        { role: "system", content: this.systemPrompt },
+        { role: "user", content: prompt },
       ],
       temperature: 0.8,
-      response_format: { type: 'json_object' },
-      max_tokens: 4000, // Aumentar para captions longas
+      response_format: { type: "json_object" },
+      max_tokens: 4000,
     });
 
-    const result = JSON.parse(completion.choices[0].message.content || '{}');
-    
-    // 🆕 VALIDAÇÃO E DEBUG
-    console.log('📝 CONTENT AGENT - Posts gerados:');
+    const result = JSON.parse(completion.choices[0].message.content || "{}");
+
+    // 🆕 PASSO 3: INJETAR OS PROMPTS VISUAIS PROFISSIONAIS NOS POSTS
+    if (result.posts && Array.isArray(result.posts)) {
+      result.posts[0].imagePrompt = visualPrompts.educational;
+      result.posts[1].imagePrompt = visualPrompts.viral;
+      result.posts[2].imagePrompt = visualPrompts.sales;
+
+      console.log("\n✅ Prompts visuais profissionais injetados nos posts!");
+    }
+
+    // 🆕 VALIDAÇÃO E DEBUG MELHORADO
+    console.log("📝 CONTENT AGENT - Posts gerados:");
     if (result.posts && Array.isArray(result.posts)) {
       result.posts.forEach((post: any, i: number) => {
         console.log(`\n✅ POST ${i + 1}:`, {
           type: post.type,
+          mediaType: post.mediaType,
           hasCaption: !!post.caption,
           captionLength: post.caption?.length || 0,
           wordCount: post.wordCount,
           emojiCount: post.emojiCount,
           qualityScore: post.qualityScore,
-          captionPreview: post.caption?.substring(0, 100) + '...',
+          hasImagePrompt: !!post.imagePrompt,
+          imagePromptLength: post.imagePrompt?.length || 0,
+          imagePromptPreview: post.imagePrompt?.substring(0, 80) + "...",
         });
       });
+
+      // Verificar se todos os posts têm os prompts visuais corretos
+      const allHavePrompts = result.posts.every(
+        (p: any) => p.imagePrompt && p.imagePrompt.length > 50
+      );
+      if (!allHavePrompts) {
+        console.error(
+          "❌ ERRO: Alguns posts não têm imagePrompts profissionais!"
+        );
+      } else {
+        console.log("✅ Todos os posts têm imagePrompts profissionais!");
+      }
     } else {
-      console.error('❌ ERRO: Posts não gerados corretamente!');
+      console.error("❌ ERRO: Posts não gerados corretamente!");
     }
 
     return {
-      agent: 'ContentAgent',
+      agent: "ContentAgent",
       result,
       tokensUsed: completion.usage?.total_tokens || 0,
       timestamp: new Date(),
     };
   }
-
   async generateContentIdeas(
     data: OnboardingData,
     count: number = 10
@@ -355,24 +406,23 @@ JSON:
 }`;
 
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4-turbo-preview',
+      model: "gpt-4-turbo-preview",
       messages: [
-        { role: 'system', content: this.systemPrompt },
-        { role: 'user', content: prompt },
+        { role: "system", content: this.systemPrompt },
+        { role: "user", content: prompt },
       ],
       temperature: 0.9,
-      response_format: { type: 'json_object' },
+      response_format: { type: "json_object" },
     });
 
     return {
-      agent: 'ContentAgent',
-      result: JSON.parse(completion.choices[0].message.content || '{}'),
+      agent: "ContentAgent",
+      result: JSON.parse(completion.choices[0].message.content || "{}"),
       tokensUsed: completion.usage?.total_tokens || 0,
       timestamp: new Date(),
     };
   }
 }
-
 // ==========================
 // 3. ANALYSIS AGENT
 // ==========================
@@ -381,11 +431,13 @@ class AnalysisAgent {
 Identificas padrões, oportunidades e dás recomendações baseadas em dados.
 Pensas como um data scientist focado em growth.`;
 
-  async analyzePerfectProfile(data: OnboardingData): Promise<AgentResponse<any>> {
+  async analyzePerfectProfile(
+    data: OnboardingData
+  ): Promise<AgentResponse<any>> {
     const prompt = `Analisa o perfil ideal para alguém em:
 
 Nicho: ${data.niche}
-Plataformas: ${data.platforms.join(', ')}
+Plataformas: ${data.platforms.join(", ")}
 Objetivo: ${data.objective}
 
 Retorna análise completa em formato JSON:
@@ -409,18 +461,18 @@ Retorna análise completa em formato JSON:
 }`;
 
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4-turbo-preview',
+      model: "gpt-4-turbo-preview",
       messages: [
-        { role: 'system', content: this.systemPrompt },
-        { role: 'user', content: prompt },
+        { role: "system", content: this.systemPrompt },
+        { role: "user", content: prompt },
       ],
       temperature: 0.6,
-      response_format: { type: 'json_object' },
+      response_format: { type: "json_object" },
     });
 
     return {
-      agent: 'AnalysisAgent',
-      result: JSON.parse(completion.choices[0].message.content || '{}'),
+      agent: "AnalysisAgent",
+      result: JSON.parse(completion.choices[0].message.content || "{}"),
       tokensUsed: completion.usage?.total_tokens || 0,
       timestamp: new Date(),
     };
@@ -451,8 +503,8 @@ Optimizas quando publicar baseado em audiência, algoritmo e comportamento.`;
 
 Frequência: ${postsPerWeek} posts/semana
 Modo: ${data.autoPosting}
-Plataformas: ${data.platforms.join(', ')}
-Melhores horários: ${strategy.postingSchedule.bestTimes.join(', ')}
+Plataformas: ${data.platforms.join(", ")}
+Melhores horários: ${strategy.postingSchedule.bestTimes.join(", ")}
 Ideias disponíveis: ${contentIdeas.ideas.length}
 
 Distribui os posts pela semana de forma estratégica.
@@ -483,18 +535,18 @@ JSON:
 }`;
 
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4-turbo-preview',
+      model: "gpt-4-turbo-preview",
       messages: [
-        { role: 'system', content: this.systemPrompt },
-        { role: 'user', content: prompt },
+        { role: "system", content: this.systemPrompt },
+        { role: "user", content: prompt },
       ],
       temperature: 0.5,
-      response_format: { type: 'json_object' },
+      response_format: { type: "json_object" },
     });
 
     return {
-      agent: 'SchedulingAgent',
-      result: JSON.parse(completion.choices[0].message.content || '{}'),
+      agent: "SchedulingAgent",
+      result: JSON.parse(completion.choices[0].message.content || "{}"),
       tokensUsed: completion.usage?.total_tokens || 0,
       timestamp: new Date(),
     };
@@ -517,94 +569,154 @@ class VisualAgent {
     }
   ): Promise<AgentResponse<any>> {
     console.log(`🎨 Visual Agent a gerar media para ${posts.length} posts...`);
-    console.log('📋 Mix: 2 Imagens + 1 Reel (vídeo HeyGen)');
-    
+    console.log("📋 Mix: 2 Imagens (FLUX) + 1 Reel (Runway)");
+
     await imageStorageService.ensureBucketExists();
-    console.log('✅ Storage configurado e pronto');
-    
+    console.log("✅ Storage configurado e pronto");
+
     const mediaGenerated = [];
     let totalTokens = 0;
 
+    // 🆕 CORRIGIR mediaType SE UNDEFINED
+    posts.forEach((post, i) => {
+      if (!post.mediaType) {
+        post.mediaType = post.type === "sales" ? "reel" : "image";
+        console.log(
+          `🔧 Post ${i + 1}: mediaType corrigido para ${post.mediaType}`
+        );
+      }
+    });
+
     for (let i = 0; i < posts.length; i++) {
       const post = posts[i];
-      
+
       try {
-        console.log(`\n🎬 Gerando media ${i + 1}/${posts.length}: ${post.mediaType || 'image'}`);
+        console.log(
+          `\n🎬 Gerando media ${i + 1}/${posts.length}: ${post.mediaType}`
+        );
 
-        if (post.mediaType === 'reel' || post.type === 'sales') {
-          console.log('🎥 Gerando REEL com HeyGen...');
-          
-          const video = await heygenVideoService.generateVideoWithAvatar({
-            script: post.videoScript || post.caption,
-            aspectRatio: '9:16',
-            background: '#FFFFFF',
-          });
-          
-          mediaGenerated.push({
-            postType: post.type,
-            mediaType: 'video',
-            videoUrl: video.videoUrl,
-            thumbnailUrl: video.thumbnailUrl,
-            duration: video.duration,
-            videoScript: post.videoScript,
-            hasText: false,
-          });
+        // 🎬 VÍDEO COM RUNWAY
+        if (post.mediaType === "reel" || post.type === "sales") {
+          console.log("🎥 Gerando REEL com Runway Gen-3 Turbo...");
 
-          console.log(`✅ Reel gerado: ${video.videoUrl}`);
-        } else {
-          console.log('🖼️ Gerando IMAGEM...');
-          
-          const shouldIncludeText = this.shouldIncludeTextInImage(post.type);
-          
-          const temporaryUrl = await imageGenerationService.generateImage({
-            prompt: post.imagePrompt,
-            style: this.selectStyleForPost(post.type, businessContext.tone),
-            aspectRatio: '1:1',
-          });
+          if (runwayVideoService.isConfigured()) {
+            try {
+              const video = await runwayVideoService.generateReelVideo({
+                script: post.videoScript || post.caption,
+                duration: 10,
+                context: businessContext,
+              });
 
-          console.log(`📥 Imagem temporária gerada, a guardar permanentemente...`);
+              mediaGenerated.push({
+                postType: post.type,
+                mediaType: "video",
+                videoUrl: video.videoUrl,
+                thumbnailUrl: video.thumbnailUrl,
+                duration: video.duration,
+                videoScript: post.videoScript,
+                hasText: false,
+                generatedWith: "runway",
+                cost: video.cost,
+              });
 
-          const saved = await imageStorageService.saveImagePermanently(
-            temporaryUrl,
-            userId,
-            `post-${post.type}-${i + 1}`
-          );
+              console.log(`✅ Reel gerado: ${video.videoUrl}`);
+              console.log(`💰 Custo: $${video.cost.toFixed(2)}`);
+            } catch (runwayError: any) {
+              console.error("❌ Runway falhou:", runwayError.message);
 
-          console.log(`✅ Imagem ${i + 1} guardada: ${saved.publicUrl}`);
-
-          mediaGenerated.push({
-            postType: post.type,
-            mediaType: 'image',
-            imageUrl: saved.publicUrl,
-            temporaryImageUrl: temporaryUrl,
-            imagePath: saved.path,
-            imagePrompt: post.imagePrompt,
-            hasText: shouldIncludeText,
-            storageBucket: saved.bucket,
-          });
+              // Placeholder
+              mediaGenerated.push({
+                postType: post.type,
+                mediaType: "video",
+                videoUrl: "https://www.w3schools.com/html/mov_bbb.mp4",
+                thumbnailUrl: "https://via.placeholder.com/1080x1920",
+                duration: 10,
+                error: true,
+              });
+            }
+          } else {
+            console.warn("⚠️ Runway não configurado, usando placeholder");
+            mediaGenerated.push({
+              postType: post.type,
+              mediaType: "video",
+              videoUrl: "https://www.w3schools.com/html/mov_bbb.mp4",
+              thumbnailUrl: "https://via.placeholder.com/1080x1920",
+              duration: 10,
+              error: true,
+            });
+          }
         }
-        
+        // 🖼️ IMAGEM COM FLUX (O QUE ESTAVA A FALTAR!)
+        else {
+          console.log("🖼️ Gerando IMAGEM com FLUX Pro Ultra...");
+
+          try {
+            const temporaryUrl = await imageGenerationService.generateImage({
+              prompt: post.imagePrompt,
+              style: this.selectStyleForPost(post.type, businessContext.tone),
+              aspectRatio: "1:1",
+            });
+
+            console.log(
+              `📥 Imagem temporária gerada, a guardar permanentemente...`
+            );
+
+            const saved = await imageStorageService.saveImagePermanently(
+              temporaryUrl,
+              userId,
+              `post-${post.type}-${Date.now()}`
+            );
+
+            console.log(`✅ Imagem ${i + 1} guardada: ${saved.publicUrl}`);
+
+            mediaGenerated.push({
+              postType: post.type,
+              mediaType: "image",
+              imageUrl: saved.publicUrl,
+              temporaryImageUrl: temporaryUrl,
+              imagePath: saved.path,
+              imagePrompt: post.imagePrompt,
+              hasText: false,
+              storageBucket: saved.bucket,
+              generatedWith: "flux-pro-ultra",
+            });
+          } catch (error) {
+            console.error(`❌ Erro ao gerar imagem:`, error);
+
+            mediaGenerated.push({
+              postType: post.type,
+              mediaType: "image",
+              imageUrl: "https://via.placeholder.com/1080x1080",
+              imagePrompt: post.imagePrompt,
+              hasText: false,
+              error: true,
+            });
+          }
+        }
+
+        // Delay entre requests
         if (i < posts.length - 1) {
-          console.log('⏳ Aguardando 3s...');
+          console.log("⏳ Aguardando 3s...");
           await new Promise((resolve) => setTimeout(resolve, 3000));
         }
       } catch (error) {
         console.error(`❌ Erro ao gerar media para post ${post.type}:`, error);
-        
-        if (post.mediaType === 'reel' || post.type === 'sales') {
+
+        // Placeholder baseado no tipo
+        if (post.mediaType === "reel") {
           mediaGenerated.push({
             postType: post.type,
-            mediaType: 'video',
-            videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
-            thumbnailUrl: 'https://via.placeholder.com/1080x1920',
-            duration: 30,
+            mediaType: "video",
+            videoUrl: "https://www.w3schools.com/html/mov_bbb.mp4",
+            thumbnailUrl: "https://via.placeholder.com/1080x1920",
+            duration: 10,
             error: true,
           });
         } else {
           mediaGenerated.push({
             postType: post.type,
-            mediaType: 'image',
-            imageUrl: `https://via.placeholder.com/1080x1080/3B82F6/FFFFFF?text=${post.type}`,
+            mediaType: "image",
+            imageUrl: "https://via.placeholder.com/1080x1080",
             imagePrompt: post.imagePrompt,
             hasText: false,
             error: true,
@@ -613,19 +725,35 @@ class VisualAgent {
       }
     }
 
-    console.log(`✅ Visual Agent: ${mediaGenerated.length} media gerados!`);
-    console.log(`📸 Imagens: ${mediaGenerated.filter(m => m.mediaType === 'image').length}`);
-    console.log(`🎬 Vídeos: ${mediaGenerated.filter(m => m.mediaType === 'video').length}`);
+    console.log(`\n✅ Visual Agent: ${mediaGenerated.length} media gerados!`);
+    console.log(
+      `📸 Imagens: ${
+        mediaGenerated.filter((m) => m.mediaType === "image").length
+      }`
+    );
+    console.log(
+      `🎬 Vídeos: ${
+        mediaGenerated.filter((m) => m.mediaType === "video").length
+      }`
+    );
+
+    const successfulMedia = mediaGenerated.filter((m) => !m.error);
+    console.log(
+      `✅ Sucesso: ${successfulMedia.length}/${mediaGenerated.length}`
+    );
 
     return {
-      agent: 'VisualAgent',
+      agent: "VisualAgent",
       result: {
         media: mediaGenerated,
         visualStrategy: await this.createVisualStrategy(businessContext),
         storageInfo: {
-          bucket: 'content-images',
+          bucket: "content-images",
           totalMedia: mediaGenerated.length,
-          successfulUploads: mediaGenerated.filter(m => !m.error).length,
+          successfulUploads: successfulMedia.length,
+          totalCost: mediaGenerated
+            .filter((m) => m.cost)
+            .reduce((sum, m) => sum + (m.cost || 0), 0),
         },
       },
       tokensUsed: totalTokens,
@@ -637,7 +765,7 @@ class VisualAgent {
     const prompt = `Cria uma estratégia visual completa para:
 
 Negócio: ${businessContext.niche}
-Público: ${businessContext.audience || 'Geral'}
+Público: ${businessContext.audience || "Geral"}
 Tom: ${businessContext.tone}
 
 Retorna estratégia em JSON:
@@ -662,49 +790,55 @@ Retorna estratégia em JSON:
 
     try {
       const completion = await openai.chat.completions.create({
-        model: 'gpt-4-turbo-preview',
+        model: "gpt-4-turbo-preview",
         messages: [
-          { role: 'system', content: this.systemPrompt },
-          { role: 'user', content: prompt },
+          { role: "system", content: this.systemPrompt },
+          { role: "user", content: prompt },
         ],
         temperature: 0.7,
-        response_format: { type: 'json_object' },
+        response_format: { type: "json_object" },
       });
 
-      return JSON.parse(completion.choices[0].message.content || '{}');
+      return JSON.parse(completion.choices[0].message.content || "{}");
     } catch (error) {
-      console.error('Erro ao criar estratégia visual:', error);
+      console.error("Erro ao criar estratégia visual:", error);
       return this.getDefaultVisualStrategy();
     }
   }
 
   private shouldIncludeTextInImage(postType: string): boolean {
-    const typesWithText = ['educational', 'announcement', 'promotional', 'tip'];
+    const typesWithText = ["educational", "announcement", "promotional", "tip"];
     return typesWithText.includes(postType.toLowerCase());
   }
 
-  private selectStyleForPost(postType: string, tone: string): 'professional' | 'vibrant' | 'minimalist' | 'realistic' | 'illustration' {
-    const toneStyleMap: Record<string, 'professional' | 'vibrant' | 'minimalist' | 'realistic' | 'illustration'> = {
-      professional: 'professional',
-      casual: 'realistic',
-      energetic: 'vibrant',
-      elegant: 'professional',
-      minimal: 'minimalist',
-      bold: 'vibrant',
-      authentic: 'realistic',
-      luxury: 'professional',
+  private selectStyleForPost(
+    postType: string,
+    tone: string
+  ): "professional" | "vibrant" | "minimalist" | "realistic" | "illustration" {
+    const toneStyleMap: Record<
+      string,
+      "professional" | "vibrant" | "minimalist" | "realistic" | "illustration"
+    > = {
+      professional: "professional",
+      casual: "realistic",
+      energetic: "vibrant",
+      elegant: "professional",
+      minimal: "minimalist",
+      bold: "vibrant",
+      authentic: "realistic",
+      luxury: "professional",
     };
 
-    const baseStyle = toneStyleMap[tone.toLowerCase()] || 'professional';
+    const baseStyle = toneStyleMap[tone.toLowerCase()] || "professional";
 
-    if (postType === 'viral' || postType === 'entertainment') {
-      return 'vibrant';
+    if (postType === "viral" || postType === "entertainment") {
+      return "vibrant";
     }
-    if (postType === 'sales' || postType === 'promotional') {
-      return 'professional';
+    if (postType === "sales" || postType === "promotional") {
+      return "professional";
     }
-    if (postType === 'educational') {
-      return 'realistic';
+    if (postType === "educational") {
+      return "realistic";
     }
 
     return baseStyle;
@@ -713,20 +847,28 @@ Retorna estratégia em JSON:
   private getDefaultVisualStrategy(): any {
     return {
       colorPalette: {
-        primary: '#3B82F6',
-        secondary: '#8B5CF6',
-        accent: '#F59E0B',
-        reasoning: 'Cores vibrantes e modernas para social media',
+        primary: "#3B82F6",
+        secondary: "#8B5CF6",
+        accent: "#F59E0B",
+        reasoning: "Cores vibrantes e modernas para social media",
       },
       visualStyle: {
-        overall: 'professional',
-        photography: 'Clean, well-lit, modern aesthetic',
-        typography: 'Bold and readable',
-        filters: 'Subtle brightness and contrast enhancement',
+        overall: "professional",
+        photography: "Clean, well-lit, modern aesthetic",
+        typography: "Bold and readable",
+        filters: "Subtle brightness and contrast enhancement",
       },
       contentGuidelines: {
-        do: ['Use high-quality images', 'Maintain brand colors', 'Keep text minimal'],
-        dont: ['Use low-resolution images', 'Overcrowd with text', 'Use inconsistent styles'],
+        do: [
+          "Use high-quality images",
+          "Maintain brand colors",
+          "Keep text minimal",
+        ],
+        dont: [
+          "Use low-resolution images",
+          "Overcrowd with text",
+          "Use inconsistent styles",
+        ],
       },
     };
   }
@@ -751,15 +893,17 @@ export class AIOrchestrator {
   }
 
   async processOnboarding(data: OnboardingData, userId: string) {
-    console.log('🤖 Multi-Agent System PREMIUM iniciado...');
-    console.log('👥 Agentes: Strategy, Content PREMIUM, Visual, Analysis, Scheduling');
+    console.log("🤖 Multi-Agent System PREMIUM iniciado...");
+    console.log(
+      "👥 Agentes: Strategy, Content PREMIUM, Visual, Analysis, Scheduling"
+    );
 
     // Fase 1: Strategy Agent
-    console.log('📊 Strategy Agent a trabalhar...');
+    console.log("📊 Strategy Agent a trabalhar...");
     const strategy = await this.strategyAgent.createStrategy(data);
 
     // Fase 2: Content Agent PREMIUM (gera 2 posts com imagem + 1 reel)
-    console.log('✍️ Content Agent PREMIUM a gerar 3 posts...');
+    console.log("✍️ Content Agent PREMIUM a gerar 3 posts...");
     const [initialPosts, contentIdeas] = await Promise.all([
       this.contentAgent.generateInitialPosts(data, strategy.result),
       this.contentAgent.generateContentIdeas(data, 10),
@@ -767,12 +911,12 @@ export class AIOrchestrator {
 
     // 🆕 VALIDAÇÃO CRÍTICA
     if (!initialPosts.result.posts || initialPosts.result.posts.length !== 3) {
-      console.error('❌ ERRO CRÍTICO: Content Agent não gerou 3 posts!');
-      throw new Error('Content Agent falhou ao gerar posts completos');
+      console.error("❌ ERRO CRÍTICO: Content Agent não gerou 3 posts!");
+      throw new Error("Content Agent falhou ao gerar posts completos");
     }
 
     // Fase 3: Visual Agent - GERA 2 IMAGENS + 1 VÍDEO
-    console.log('🎨🎬 Visual Agent a criar 2 imagens + 1 reel...');
+    console.log("🎨🎬 Visual Agent a criar 2 imagens + 1 reel...");
     const visualContent = await this.visualAgent.generateMediaForPosts(
       initialPosts.result.posts,
       userId,
@@ -784,24 +928,27 @@ export class AIOrchestrator {
     );
 
     // Combinar posts com media gerada
-    const postsWithMedia = initialPosts.result.posts.map((post: any, index: number) => ({
-      ...post,
-      ...(visualContent.result.media[index]?.mediaType === 'video' && {
-        videoUrl: visualContent.result.media[index]?.videoUrl,
-        thumbnailUrl: visualContent.result.media[index]?.thumbnailUrl,
-        duration: visualContent.result.media[index]?.duration,
-      }),
-      ...(visualContent.result.media[index]?.mediaType === 'image' && {
-        imageUrl: visualContent.result.media[index]?.imageUrl,
-        temporaryImageUrl: visualContent.result.media[index]?.temporaryImageUrl,
-        imagePath: visualContent.result.media[index]?.imagePath,
-      }),
-      mediaType: visualContent.result.media[index]?.mediaType,
-      visualMetadata: visualContent.result.media[index],
-    }));
+    const postsWithMedia = initialPosts.result.posts.map(
+      (post: any, index: number) => ({
+        ...post,
+        ...(visualContent.result.media[index]?.mediaType === "video" && {
+          videoUrl: visualContent.result.media[index]?.videoUrl,
+          thumbnailUrl: visualContent.result.media[index]?.thumbnailUrl,
+          duration: visualContent.result.media[index]?.duration,
+        }),
+        ...(visualContent.result.media[index]?.mediaType === "image" && {
+          imageUrl: visualContent.result.media[index]?.imageUrl,
+          temporaryImageUrl:
+            visualContent.result.media[index]?.temporaryImageUrl,
+          imagePath: visualContent.result.media[index]?.imagePath,
+        }),
+        mediaType: visualContent.result.media[index]?.mediaType,
+        visualMetadata: visualContent.result.media[index],
+      })
+    );
 
     // 🆕 DEBUG FINAL DOS POSTS
-    console.log('\n📊 RESUMO FINAL DOS POSTS:');
+    console.log("\n📊 RESUMO FINAL DOS POSTS:");
     postsWithMedia.forEach((post: any, i: number) => {
       console.log(`\nPOST ${i + 1}:`, {
         type: post.type,
@@ -814,11 +961,13 @@ export class AIOrchestrator {
     });
 
     // Fase 4: Analysis Agent
-    console.log('\n🔍 Analysis Agent a analisar...');
-    const profileAnalysis = await this.analysisAgent.analyzePerfectProfile(data);
+    console.log("\n🔍 Analysis Agent a analisar...");
+    const profileAnalysis = await this.analysisAgent.analyzePerfectProfile(
+      data
+    );
 
     // Fase 5: Scheduling Agent
-    console.log('📅 Scheduling Agent a criar calendário...');
+    console.log("📅 Scheduling Agent a criar calendário...");
     const calendar = await this.schedulingAgent.createWeeklyCalendar(
       data,
       strategy.result,
@@ -833,7 +982,7 @@ export class AIOrchestrator {
       profileAnalysis.tokensUsed +
       calendar.tokensUsed;
 
-    console.log('\n✅ Multi-Agent System PREMIUM concluído!');
+    console.log("\n✅ Multi-Agent System PREMIUM concluído!");
     console.log(`💰 Tokens totais: ${totalTokens}`);
     console.log(`📸 2 Imagens geradas e guardadas`);
     console.log(`🎬 1 Reel gerado com HeyGen`);

@@ -107,162 +107,180 @@ Retorna JSON com:
 }
 
 // ==========================
-// 2. CONTENT AGENT (ATUALIZADO: 2 IMAGENS + 1 REEL)
+// 2. CONTENT AGENT PREMIUM 🔥
 // ==========================
 class ContentAgent {
-  private systemPrompt = `Tu és o Content Agent, mestre em criar conteúdo viral e envolvente.
-Especializas-te em escrever captions que geram engagement, usando storytelling e psicologia.
-Nunca crias conteúdo genérico - tudo é personalizado e estratégico.
+  private systemPrompt = `Tu és o Content Agent PREMIUM, especialista em copywriting viral para Instagram.
 
-IMPORTANTE - LÍNGUA PORTUGUESA DE PORTUGAL:
+ESPECIALIDADES:
+- Hooks que param o scroll em 0.3 segundos
+- Storytelling que gera conexão emocional
+- CTAs que convertem sem parecer vendas
+- Emojis estratégicos (não aleatórios)
+- Estrutura AIDA (Atenção, Interesse, Desejo, Ação)
+
+REGRAS DE OURO PARA CAPTIONS:
+1. SEMPRE começar com hook impactante (max 10 palavras)
+2. Caption entre 125-150 palavras (sweet spot do algoritmo)
+3. Mínimo 3 emojis estratégicos por caption
+4. CTA claro e específico no final
+5. Hashtags: 5 nicho + 3 médio volume + 2 alto volume
+6. Evitar clichês ("não percas", "clica no link", "segue-nos")
+7. Tom conversacional, como amigo dando conselho
+
+ESTRUTURA OBRIGATÓRIA DA CAPTION:
+[EMOJI] HOOK IMPACTANTE (1 linha)
+↓
+Linha em branco
+↓
+Storytelling (80-100 palavras)
+- Conecta com dor/desejo
+- Usa "tu" não "você"
+- Frases curtas e diretas
+↓
+Linha em branco
+↓
+Value proposition (20-30 palavras)
+↓
+CTA específico [EMOJI]
+↓
+Hashtags (10 no total)
+
+EXEMPLOS DE HOOKS FORTES:
+❌ "Hoje vou falar sobre..."
+✅ "Isto mudou o meu negócio em 7 dias 👇"
+
+❌ "Dica importante para ti"
+✅ "Se ainda fazes isto, estás a perder 50% dos clientes 🚨"
+
+❌ "Vou ensinar-te como..."
+✅ "O erro que todos cometem (eu incluído) 💔"
+
+IMPORTANTE - PORTUGUÊS DE PORTUGAL:
 - SEMPRE usa "tu", "teu", "contigo" (NUNCA "você", "seu", "consigo")
-- Usa expressões portuguesas: "fixe", "espetacular", "brutal", "top"
-- Evita brasileirismos: NUNCA uses "você", "legal", "bacana", "cara"
-- Tom informal português: "Olá!", "Vamos lá", "Atenção", "Experimenta"
-- Exemplos CORRETOS PT-PT:
-  ✅ "Queres saber como...?" (não "Você quer saber")
-  ✅ "Isto é para ti" (não "Isso é para você")
-  ✅ "O teu negócio" (não "O seu negócio")
-  ✅ "Vê isto" (não "Veja isso")
-  ✅ "Partilha nos comentários" (não "Compartilhe nos comentários")
+- Usa expressões portuguesas: "fixe", "espetacular", "brutal"
+- Tom direto: "Olá!", "Vê isto", "Experimenta", "Atenção"
 
-CRÍTICO PARA IMAGENS - PARECER FOTOS REAIS, NÃO IA:
-Quando crias imagePrompts, descreves como se fosses um fotógrafo a tirar uma foto REAL com smartphone:
-
-✅ SEMPRE incluir:
-- "Real person" ou "Authentic moment"
-- "Shot on iPhone" ou "smartphone photography"
-- "Natural lighting" ou "window light"
-- Ambiente específico e realista (gym real, café real, escritório real)
-- "Candid photo" ou "lifestyle photography"
-- Imperfeições naturais: "natural skin texture", "casual pose"
-
-❌ NUNCA mencionar:
-- "Perfect", "flawless", "ideal", "model-like"
-- "Studio lighting", "professional setup"
-- "Illustration", "design", "graphic", "render"
-- "Dramatic lighting", "cinematic"
-- "Beauty filter", "airbrushed"
-
-EXEMPLOS CORRETOS (parecem fotos reais):
-✅ "Real Portuguese personal trainer in authentic gym, shot on iPhone 15, natural overhead lighting, casual workout clothes, candid moment during training session, natural skin texture, relaxed expression, real fitness environment with equipment in background"
-✅ "Authentic lifestyle photo of real person working on laptop in modern Lisbon cafe, smartphone photography, natural window light, everyday clothes, genuine concentration, slightly grainy, unposed moment, real coffee cup on table"
-✅ "Real entrepreneur in casual home office, shot with phone camera, natural daylight from window, wearing comfortable clothing, authentic workspace with slight mess, candid expression, real life setting"
-
-EXEMPLOS ERRADOS (parecem IA):
-❌ "Perfect model in professional gym studio with dramatic lighting"
-❌ "Flawless fitness professional in ideal setting"
-❌ "Beautiful illustration of trainer with perfect posture"`;
+CRÍTICO PARA IMAGENS - PARECER FOTOS REAIS:
+Prompts devem descrever fotos REAIS com smartphone:
+✅ "Real person shot on iPhone, natural lighting, candid moment"
+❌ "Perfect model, studio lighting, professional photography"`;
 
   async generateInitialPosts(
     data: OnboardingData,
     strategy: any
   ): Promise<AgentResponse<any>> {
-    const prompt = `Cria 3 posts iniciais COMPLETOS para começar:
+    const prompt = `Cria 3 posts iniciais PREMIUM (nota 9-10) para Instagram:
 
-Contexto:
+CONTEXTO:
 - Nicho: ${data.niche}
 - Objetivo: ${data.objective}
 - Tom: ${data.tone}
-- Plataforma principal: ${data.platforms[0]}
-- Pilares de conteúdo: ${strategy.contentPillars.map((p: any) => p.name).join(', ')}
+- Plataforma: ${data.platforms[0]}
+- Pilares: ${strategy.contentPillars.map((p: any) => p.name).join(', ')}
 
-⚠️ CRÍTICO - PORTUGUÊS DE PORTUGAL (PT-PT):
-TODAS as captions, hooks e CTAs DEVEM ser em PORTUGUÊS DE PORTUGAL:
-- Usa "tu", "teu", "contigo" (NUNCA "você", "seu")
-- Usa "partilhar" (não "compartilhar")
-- Usa "telemóvel" (não "celular")
-- Usa "fixe", "brutal", "espetacular" (não "legal", "bacana")
-- Tom direto e informal português: "Olá!", "Vê isto", "Experimenta", "Atenção"
+POSTS REQUERIDOS (nesta ordem):
+1. POST COM IMAGEM - EDUCATIVO (ensina algo valioso)
+2. POST COM IMAGEM - VIRAL (entretenimento/relatable)
+3. REEL COM VÍDEO - VENDAS/CTA (converte)
 
-EXEMPLOS DE TEXTO PT-PT:
-✅ "Queres saber o segredo? Vê aqui 👇"
-✅ "Isto mudou completamente o meu negócio"
-✅ "3 erros que TODOS cometem (e tu provavelmente também)"
-✅ "Partilha isto com alguém que precisa"
-✅ "Deixa um ❤️ se concordas"
+REQUISITOS OBRIGATÓRIOS (para nota 10):
+✅ Hook que para o scroll
+✅ Caption 125-150 palavras COM storytelling
+✅ Mínimo 3 emojis estratégicos
+✅ CTA claro e específico
+✅ 10 hashtags (5 nicho + 3 médio + 2 alto)
+✅ Tom conversacional PT-PT
+✅ Zero clichês
 
-❌ NUNCA:
-"Você quer saber?" 
-"Isso mudou..."
-"Compartilhe com alguém"
-"Deixe um comentário"
+ESTRUTURA DA CAPTION (OBRIGATÓRIA):
+🎯 HOOK impactante (1 linha)
 
-IMPORTANTE: Cria EXATAMENTE nesta ordem:
-1. POST COM IMAGEM (educativo - ensina algo valioso)
-2. POST COM IMAGEM (viral - entretenimento/relatable)
-3. REEL COM VÍDEO (vendas/CTA - converte)
+[Linha em branco]
 
-SUPER CRÍTICO - IMAGENS DEVEM PARECER FOTOS REAIS, NÃO IA:
+Storytelling emocional de 80-100 palavras que:
+- Liga à dor/desejo do público
+- Usa "tu", "teu", "contigo"
+- Frases curtas e impactantes
+- Conta história pessoal ou caso real
+- Inclui 2-3 emojis naturais
 
-Para cada imagePrompt (posts 1 e 2), segue esta FÓRMULA EXATA:
+[Linha em branco]
 
-"Real [pessoa portuguesa relevante ao nicho] in [local específico real], shot on iPhone 15, natural [tipo de luz], wearing [roupa casual real], [ação natural/candid], natural skin texture, relaxed/genuine expression, slightly grainy, unposed moment, real [ambiente] with [detalhes reais]"
+Value proposition (20-30 palavras):
+- O que vão ganhar
+- Benefício claro e tangível
 
-EXEMPLOS PERFEITOS por nicho:
+[Linha em branco]
 
-FITNESS/TREINO:
-✅ "Real Portuguese fitness enthusiast in authentic local gym, shot on iPhone 15, natural overhead gym lighting, wearing everyday workout clothes, candid moment mid-exercise, natural skin texture with slight sweat, relaxed concentration, slightly grainy, unposed training moment, real gym environment with equipment and mirrors"
+💬 CTA específico e acionável
+(Ex: "Comenta SIM se queres X" ou "Partilha com quem precisa disto")
 
-NEGÓCIOS/EMPREENDEDORISMO:
-✅ "Real Portuguese entrepreneur working on laptop in casual Lisbon cafe, shot on iPhone 15 Pro, natural window daylight, wearing comfortable everyday clothes, genuine concentration on screen, natural skin texture, candid working moment, slightly grainy, real coffee shop atmosphere with people in soft background"
-
-BELEZA/ESTÉTICA:
-✅ "Real person applying skincare in authentic bathroom, shot with smartphone camera, natural bathroom lighting, wearing casual home clothes, candid self-care moment, natural skin texture visible, relaxed expression, everyday setting, real bathroom counter with products"
-
-COMIDA/RESTAURANTE:
-✅ "Real Portuguese chef cooking in authentic kitchen, shot on iPhone, natural kitchen lighting, wearing comfortable chef attire, candid moment while preparing food, natural expression, slightly grainy, real restaurant kitchen with cooking equipment and ingredients"
-
-CONSULTOR/COACH:
-✅ "Real professional during casual consulting session in authentic office space, shot on smartphone, natural daylight from windows, business casual attire, genuine interaction moment, natural skin texture, relaxed professional demeanor, slightly grainy, real office with desk and materials"
-
-❌ O QUE NUNCA FAZER:
-- "Perfect model with flawless skin"
-- "Professional photography with studio lighting"
-- "Cinematic portrait with dramatic background"
-- "Beautiful illustration of ideal scenario"
-
-Para o REEL (post 3), cria um script de 30-45 segundos para talking head EM PT-PT.
-
-Formato JSON:
+FORMATO JSON:
 {
   "posts": [
     {
       "type": "educational",
       "mediaType": "image",
-      "hook": "Frase de abertura impactante EM PT-PT (usa TU, não VOCÊ)",
-      "caption": "Caption completa com storytelling EM PT-PT (TU, TEU, CONTIGO)",
-      "hashtags": ["#tag1", "#tag2", "#tag3"],
-      "cta": "Call to action EM PT-PT (Partilha, Comenta, Deixa)",
-      "imagePrompt": "PROMPT SEGUINDO FÓRMULA ACIMA - FOTO REAL COM IPHONE",
-      "estimatedEngagement": "alto/médio/baixo",
-      "bestTimeToPost": "09:00"
+      "hook": "Hook impactante max 10 palavras EM PT-PT",
+      "caption": "Caption COMPLETA 125-150 palavras seguindo ESTRUTURA OBRIGATÓRIA acima. IMPORTANTE: Deve ser um texto corrido natural, não pode ter marcadores tipo '[Linha em branco]', '[Storytelling]', etc. Apenas o texto final pronto a publicar com quebras de linha reais.",
+      "hashtags": ["tag1", "tag2", "tag3", "tag4", "tag5", "tag6", "tag7", "tag8", "tag9", "tag10"],
+      "cta": "CTA específico PT-PT",
+      "imagePrompt": "Real Portuguese [pessoa do nicho] in authentic [local], shot on iPhone 15, natural lighting, casual clothes, candid moment, natural skin texture, relaxed expression, slightly grainy, unposed, real environment",
+      "estimatedEngagement": "alto",
+      "bestTimeToPost": "09:00",
+      "wordCount": 135,
+      "emojiCount": 4,
+      "qualityScore": 9.5
     },
     {
       "type": "viral",
       "mediaType": "image",
       "hook": "Hook viral e relatable EM PT-PT",
-      "caption": "Caption com storytelling emocional EM PT-PT",
-      "hashtags": ["#tag1", "#tag2"],
-      "cta": "Comentário ou partilha EM PT-PT",
-      "imagePrompt": "PROMPT SEGUINDO FÓRMULA ACIMA - MOMENTO AUTÊNTICO",
-      "estimatedEngagement": "alto",
-      "bestTimeToPost": "13:00"
+      "caption": "Caption COMPLETA 125-150 palavras com storytelling emocional. Texto final pronto, sem marcadores.",
+      "hashtags": ["tag1", "tag2", "tag3", "tag4", "tag5", "tag6", "tag7", "tag8", "tag9", "tag10"],
+      "cta": "CTA para comentário ou partilha PT-PT",
+      "imagePrompt": "Real person in [situação relatable], shot on smartphone, natural moment, authentic emotion, candid photography",
+      "estimatedEngagement": "muito alto",
+      "bestTimeToPost": "13:00",
+      "wordCount": 140,
+      "emojiCount": 5,
+      "qualityScore": 9.5
     },
     {
       "type": "sales",
       "mediaType": "reel",
       "hook": "Hook poderoso para vídeo EM PT-PT",
-      "caption": "Caption que converte EM PT-PT",
-      "hashtags": ["#reels", "#tag2"],
-      "cta": "Link na bio / Envia DM (EM PT-PT)",
-      "videoScript": "Script de 30-45s EM PT-PT: [Intro 5s] → [Problema 10s] → [Solução 15s] → [CTA 10s]",
-      "imagePrompt": "Thumbnail: Real Portuguese person in [contexto], shot on iPhone, natural lighting, casual authentic moment",
+      "caption": "Caption de CONVERSÃO 125-150 palavras. Storytelling que leva ao CTA forte. Texto final pronto.",
+      "hashtags": ["reels", "tag2", "tag3", "tag4", "tag5", "tag6", "tag7", "tag8", "tag9", "tag10"],
+      "cta": "Link na bio / Envia DM PT-PT",
+      "videoScript": "Script detalhado 30-45 segundos EM PT-PT:\n\n[0-5s] INTRO - Hook visual + verbal\n[5-15s] PROBLEMA - Dor que o público sente\n[15-30s] SOLUÇÃO - Como resolver (teu produto/serviço)\n[30-45s] CTA - Ação específica clara\n\nTexto completo do que dizer em cada parte, em PT-PT conversacional.",
+      "imagePrompt": "Real Portuguese person in [contexto vendas], shot on iPhone, natural lighting, professional but casual",
       "estimatedEngagement": "muito alto",
-      "bestTimeToPost": "19:00"
+      "bestTimeToPost": "19:00",
+      "wordCount": 145,
+      "emojiCount": 4,
+      "qualityScore": 9.5
     }
   ]
-}`;
+}
+
+CRÍTICO: Cada caption DEVE ser texto FINAL pronto a copiar/colar. Não incluir [instruções], [Storytelling], etc. Apenas o texto real com emojis e quebras de linha.
+
+EXEMPLO DE CAPTION BOA:
+"🚀 Isto mudou completamente o meu negócio
+
+Há 6 meses estava a trabalhar 12 horas por dia. Acordava às 6h, dormia à meia-noite. Zero resultados.
+
+Até que descobri este sistema. Em 30 dias, dobrei os resultados com metade do esforço. Sim, é possível.
+
+O segredo? Foco nas 3 tarefas certas. Não trabalhar mais, trabalhar melhor.
+
+💬 Comenta FOCO se também queres saber quais são
+
+#empreendedorismo #produtividade #negociosonline #marketingdigital #sucessodigital #trabalhointeligente #focoemresultados #crescimento #estrategia #portugal"
+
+IMPORTANTE: Gera SEMPRE 3 posts completos. Se não gerar os 3, refaz.`;
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4-turbo-preview',
@@ -272,11 +290,32 @@ Formato JSON:
       ],
       temperature: 0.8,
       response_format: { type: 'json_object' },
+      max_tokens: 4000, // Aumentar para captions longas
     });
+
+    const result = JSON.parse(completion.choices[0].message.content || '{}');
+    
+    // 🆕 VALIDAÇÃO E DEBUG
+    console.log('📝 CONTENT AGENT - Posts gerados:');
+    if (result.posts && Array.isArray(result.posts)) {
+      result.posts.forEach((post: any, i: number) => {
+        console.log(`\n✅ POST ${i + 1}:`, {
+          type: post.type,
+          hasCaption: !!post.caption,
+          captionLength: post.caption?.length || 0,
+          wordCount: post.wordCount,
+          emojiCount: post.emojiCount,
+          qualityScore: post.qualityScore,
+          captionPreview: post.caption?.substring(0, 100) + '...',
+        });
+      });
+    } else {
+      console.error('❌ ERRO: Posts não gerados corretamente!');
+    }
 
     return {
       agent: 'ContentAgent',
-      result: JSON.parse(completion.choices[0].message.content || '{}'),
+      result,
       tokensUsed: completion.usage?.total_tokens || 0,
       timestamp: new Date(),
     };
@@ -286,31 +325,31 @@ Formato JSON:
     data: OnboardingData,
     count: number = 10
   ): Promise<AgentResponse<any>> {
-    const prompt = `Gera ${count} ideias de conteúdo específicas para:
+    const prompt = `Gera ${count} ideias de conteúdo VIRAIS para:
     
 Nicho: ${data.niche}
 Objetivo: ${data.objective}
 Tom: ${data.tone}
 
 ⚠️ IMPORTANTE: Todas as ideias em PORTUGUÊS DE PORTUGAL (PT-PT)
-- Usa "tu", "teu" (nunca "você", "seu")
-- Tom informal português
 
-Cada ideia deve ter:
-- Título/Hook cativante EM PT-PT
-- Tipo (carrossel/reel/post)
-- Valor que entrega
-- Dificuldade de criar (fácil/média/difícil)
+Cada ideia PREMIUM deve ter:
+- Hook viral (testado no nicho)
+- Tipo otimizado (carrossel/reel/post)
+- Promise clara de valor
+- Dificuldade realista
 
 JSON:
 {
   "ideas": [
     {
-      "title": "Como fazer X em 5 passos (EM PT-PT)",
+      "title": "Hook viral específico do nicho EM PT-PT",
       "type": "carousel",
-      "value": "Ensina processo completo",
+      "value": "Valor específico que entrega",
       "difficulty": "easy",
-      "estimatedTime": "10min"
+      "estimatedTime": "10min",
+      "viralPotential": "alto",
+      "targetPillar": "nome do pilar de conteúdo"
     }
   ]
 }`;
@@ -463,24 +502,11 @@ JSON:
 }
 
 // ==========================
-// 5. VISUAL AGENT (ATUALIZADO: SUPORTE A IMAGENS + VÍDEOS)
+// 5. VISUAL AGENT
 // ==========================
 class VisualAgent {
-  private systemPrompt = `Tu és o Visual Agent, especialista em criar estratégias visuais profissionais.
-És expert em:
-- Criar prompts detalhados para geração de imagens por IA
-- Garantir consistência visual da marca
-- Otimizar imagens para engajamento em redes sociais
-- Criar texto legível e impactante em imagens
-- Escolher o estilo visual ideal para cada tipo de conteúdo
-- Garantir persistência permanente das imagens geradas
-- Gerar vídeos com HeyGen para reels
+  private systemPrompt = `Tu és o Visual Agent, especialista em criar estratégias visuais profissionais.`;
 
-Pensas como um diretor de arte com 10+ anos de experiência em social media.`;
-
-  /**
-   * Gera IMAGENS + VÍDEOS para os posts (2 fotos + 1 reel)
-   */
   async generateMediaForPosts(
     posts: any[],
     userId: string,
@@ -493,7 +519,6 @@ Pensas como um diretor de arte com 10+ anos de experiência em social media.`;
     console.log(`🎨 Visual Agent a gerar media para ${posts.length} posts...`);
     console.log('📋 Mix: 2 Imagens + 1 Reel (vídeo HeyGen)');
     
-    // ✅ Garantir que o bucket existe
     await imageStorageService.ensureBucketExists();
     console.log('✅ Storage configurado e pronto');
     
@@ -507,7 +532,6 @@ Pensas como um diretor de arte com 10+ anos de experiência em social media.`;
         console.log(`\n🎬 Gerando media ${i + 1}/${posts.length}: ${post.mediaType || 'image'}`);
 
         if (post.mediaType === 'reel' || post.type === 'sales') {
-          // POST 3: GERAR VÍDEO COM HEYGEN 🎥
           console.log('🎥 Gerando REEL com HeyGen...');
           
           const video = await heygenVideoService.generateVideoWithAvatar({
@@ -515,8 +539,6 @@ Pensas como um diretor de arte com 10+ anos de experiência em social media.`;
             aspectRatio: '9:16',
             background: '#FFFFFF',
           });
-
-          // TODO: Guardar vídeo também (opcional, HeyGen já hospeda)
           
           mediaGenerated.push({
             postType: post.type,
@@ -530,12 +552,10 @@ Pensas como um diretor de arte com 10+ anos de experiência em social media.`;
 
           console.log(`✅ Reel gerado: ${video.videoUrl}`);
         } else {
-          // POSTS 1 e 2: GERAR IMAGENS 📸
           console.log('🖼️ Gerando IMAGEM...');
           
           const shouldIncludeText = this.shouldIncludeTextInImage(post.type);
           
-          // Gerar imagem temporária
           const temporaryUrl = await imageGenerationService.generateImage({
             prompt: post.imagePrompt,
             style: this.selectStyleForPost(post.type, businessContext.tone),
@@ -544,7 +564,6 @@ Pensas como um diretor de arte com 10+ anos de experiência em social media.`;
 
           console.log(`📥 Imagem temporária gerada, a guardar permanentemente...`);
 
-          // Guardar permanentemente
           const saved = await imageStorageService.saveImagePermanently(
             temporaryUrl,
             userId,
@@ -565,7 +584,6 @@ Pensas como um diretor de arte com 10+ anos de experiência em social media.`;
           });
         }
         
-        // Delay para evitar rate limits
         if (i < posts.length - 1) {
           console.log('⏳ Aguardando 3s...');
           await new Promise((resolve) => setTimeout(resolve, 3000));
@@ -573,7 +591,6 @@ Pensas como um diretor de arte com 10+ anos de experiência em social media.`;
       } catch (error) {
         console.error(`❌ Erro ao gerar media para post ${post.type}:`, error);
         
-        // Fallback
         if (post.mediaType === 'reel' || post.type === 'sales') {
           mediaGenerated.push({
             postType: post.type,
@@ -616,7 +633,6 @@ Pensas como um diretor de arte com 10+ anos de experiência em social media.`;
     };
   }
 
-  // TODOS OS MÉTODOS PRIVADOS DO TEU CÓDIGO ORIGINAL
   private async createVisualStrategy(businessContext: any): Promise<any> {
     const prompt = `Cria uma estratégia visual completa para:
 
@@ -641,14 +657,7 @@ Retorna estratégia em JSON:
   "contentGuidelines": {
     "do": ["diretriz 1", "diretriz 2"],
     "dont": ["evitar 1", "evitar 2"]
-  },
-  "templateSuggestions": [
-    {
-      "type": "carousel_education",
-      "layout": "descrição do layout",
-      "useCase": "quando usar"
-    }
-  ]
+  }
 }`;
 
     try {
@@ -674,46 +683,12 @@ Retorna estratégia em JSON:
     return typesWithText.includes(postType.toLowerCase());
   }
 
-  private extractBusinessType(niche: string): string {
-    const businessTypes: Record<string, string[]> = {
-      fitness: ['fitness', 'gym', 'workout', 'personal trainer', 'yoga'],
-      food: ['restaurant', 'food', 'chef', 'catering', 'bakery'],
-      fashion: ['fashion', 'clothing', 'boutique', 'style', 'designer'],
-      beauty: ['beauty', 'makeup', 'skincare', 'cosmetics', 'salon'],
-      tech: ['tech', 'software', 'app', 'saas', 'startup'],
-      coaching: ['coach', 'consulting', 'mentor', 'advisor'],
-    };
-
-    const nicheLower = niche.toLowerCase();
-    for (const [type, keywords] of Object.entries(businessTypes)) {
-      if (keywords.some((keyword) => nicheLower.includes(keyword))) {
-        return type;
-      }
-    }
-
-    return 'professional';
-  }
-
-  private mapPostTypeToGoal(postType: string): string {
-    const goalMap: Record<string, string> = {
-      educational: 'educação',
-      viral: 'engagement',
-      sales: 'conversão',
-      promotional: 'conversão',
-      behind_scenes: 'autenticidade',
-      testimonial: 'prova social',
-    };
-
-    return goalMap[postType.toLowerCase()] || 'engagement';
-  }
-
   private selectStyleForPost(postType: string, tone: string): 'professional' | 'vibrant' | 'minimalist' | 'realistic' | 'illustration' {
-    // Mapeia tons para estilos válidos do ImageGenerationService
     const toneStyleMap: Record<string, 'professional' | 'vibrant' | 'minimalist' | 'realistic' | 'illustration'> = {
       professional: 'professional',
-      casual: 'realistic',        // authentic → realistic
+      casual: 'realistic',
       energetic: 'vibrant',
-      elegant: 'professional',    // luxury → professional
+      elegant: 'professional',
       minimal: 'minimalist',
       bold: 'vibrant',
       authentic: 'realistic',
@@ -722,7 +697,6 @@ Retorna estratégia em JSON:
 
     const baseStyle = toneStyleMap[tone.toLowerCase()] || 'professional';
 
-    // Prioridade por tipo de post
     if (postType === 'viral' || postType === 'entertainment') {
       return 'vibrant';
     }
@@ -730,15 +704,10 @@ Retorna estratégia em JSON:
       return 'professional';
     }
     if (postType === 'educational') {
-      return 'realistic';  // Educativo = fotos realistas
+      return 'realistic';
     }
 
     return baseStyle;
-  }
-
-  private extractMainText(text: string): string {
-    const words = text.split(' ').slice(0, 3).join(' ');
-    return words.length > 25 ? words.substring(0, 22) + '...' : words;
   }
 
   private getDefaultVisualStrategy(): any {
@@ -759,7 +728,6 @@ Retorna estratégia em JSON:
         do: ['Use high-quality images', 'Maintain brand colors', 'Keep text minimal'],
         dont: ['Use low-resolution images', 'Overcrowd with text', 'Use inconsistent styles'],
       },
-      templateSuggestions: [],
     };
   }
 }
@@ -783,21 +751,27 @@ export class AIOrchestrator {
   }
 
   async processOnboarding(data: OnboardingData, userId: string) {
-    console.log('🤖 Multi-Agent System iniciado...');
-    console.log('👥 Agentes: Strategy, Content, Visual (2 imgs + 1 vídeo!), Analysis, Scheduling');
+    console.log('🤖 Multi-Agent System PREMIUM iniciado...');
+    console.log('👥 Agentes: Strategy, Content PREMIUM, Visual, Analysis, Scheduling');
 
     // Fase 1: Strategy Agent
     console.log('📊 Strategy Agent a trabalhar...');
     const strategy = await this.strategyAgent.createStrategy(data);
 
-    // Fase 2: Content Agent (gera 2 posts com imagem + 1 reel)
-    console.log('✍️ Content Agent a gerar 3 posts (2 imgs + 1 reel)...');
+    // Fase 2: Content Agent PREMIUM (gera 2 posts com imagem + 1 reel)
+    console.log('✍️ Content Agent PREMIUM a gerar 3 posts...');
     const [initialPosts, contentIdeas] = await Promise.all([
       this.contentAgent.generateInitialPosts(data, strategy.result),
       this.contentAgent.generateContentIdeas(data, 10),
     ]);
 
-    // Fase 3: Visual Agent - GERA 2 IMAGENS + 1 VÍDEO HEYGEN! 🎨🎬
+    // 🆕 VALIDAÇÃO CRÍTICA
+    if (!initialPosts.result.posts || initialPosts.result.posts.length !== 3) {
+      console.error('❌ ERRO CRÍTICO: Content Agent não gerou 3 posts!');
+      throw new Error('Content Agent falhou ao gerar posts completos');
+    }
+
+    // Fase 3: Visual Agent - GERA 2 IMAGENS + 1 VÍDEO
     console.log('🎨🎬 Visual Agent a criar 2 imagens + 1 reel...');
     const visualContent = await this.visualAgent.generateMediaForPosts(
       initialPosts.result.posts,
@@ -812,25 +786,35 @@ export class AIOrchestrator {
     // Combinar posts com media gerada
     const postsWithMedia = initialPosts.result.posts.map((post: any, index: number) => ({
       ...post,
-      // Se for vídeo
       ...(visualContent.result.media[index]?.mediaType === 'video' && {
         videoUrl: visualContent.result.media[index]?.videoUrl,
         thumbnailUrl: visualContent.result.media[index]?.thumbnailUrl,
         duration: visualContent.result.media[index]?.duration,
       }),
-      // Se for imagem
       ...(visualContent.result.media[index]?.mediaType === 'image' && {
         imageUrl: visualContent.result.media[index]?.imageUrl,
         temporaryImageUrl: visualContent.result.media[index]?.temporaryImageUrl,
         imagePath: visualContent.result.media[index]?.imagePath,
       }),
-      // Metadata comum
       mediaType: visualContent.result.media[index]?.mediaType,
       visualMetadata: visualContent.result.media[index],
     }));
 
+    // 🆕 DEBUG FINAL DOS POSTS
+    console.log('\n📊 RESUMO FINAL DOS POSTS:');
+    postsWithMedia.forEach((post: any, i: number) => {
+      console.log(`\nPOST ${i + 1}:`, {
+        type: post.type,
+        mediaType: post.mediaType,
+        hasCaption: !!post.caption,
+        captionLength: post.caption?.length,
+        hasImage: !!post.imageUrl || !!post.videoUrl,
+        qualityScore: post.qualityScore,
+      });
+    });
+
     // Fase 4: Analysis Agent
-    console.log('🔍 Analysis Agent a analisar...');
+    console.log('\n🔍 Analysis Agent a analisar...');
     const profileAnalysis = await this.analysisAgent.analyzePerfectProfile(data);
 
     // Fase 5: Scheduling Agent
@@ -849,14 +833,15 @@ export class AIOrchestrator {
       profileAnalysis.tokensUsed +
       calendar.tokensUsed;
 
-    console.log('✅ Multi-Agent System concluído!');
+    console.log('\n✅ Multi-Agent System PREMIUM concluído!');
     console.log(`💰 Tokens totais: ${totalTokens}`);
-    console.log(`📸 2 Imagens geradas e guardadas permanentemente`);
+    console.log(`📸 2 Imagens geradas e guardadas`);
     console.log(`🎬 1 Reel gerado com HeyGen`);
+    console.log(`📝 ${postsWithMedia.length} Posts com captions completas`);
 
     return {
       strategy: strategy.result,
-      initialPosts: postsWithMedia, // ← 2 COM IMAGENS + 1 COM VÍDEO!
+      initialPosts: postsWithMedia,
       contentIdeas: contentIdeas.result.ideas,
       profileAnalysis: profileAnalysis.result,
       weeklyCalendar: calendar.result,

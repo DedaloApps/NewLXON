@@ -30,7 +30,7 @@ model User {
   auditReports   AuditReport[]
   teamMembership TeamMember[]
   ownedTeam      Team?           @relation("TeamOwner")
-  onboarding     OnboardingResponse?  // ← ADICIONA ESTA LINHA
+  onboarding     OnboardingResponse?
 }
 
 model Team {
@@ -90,12 +90,19 @@ model Post {
   userId          String
   socialAccountId String?
   
-  type            String // SINGLE, CAROUSEL, VIDEO, REEL, STORY
+  type            String // SINGLE, CAROUSEL, VIDEO, REEL, STORY (ou educational, viral, sales, engagement para posts da IA)
   status          String @default("DRAFT") // DRAFT, SCHEDULED, PUBLISHING, PUBLISHED, FAILED
   
   caption         String?
   hashtags        String? // JSON array as string
   location        String?
+  
+  // Campos específicos para posts gerados pela IA (Content Hub)
+  hook                String? // Hook impactante do post
+  cta                 String? // Call to action
+  imagePrompt         String? // Prompt usado para gerar a imagem
+  estimatedEngagement String? // alto, médio, baixo
+  bestTimeToPost      String? // HH:MM formato 24h
   
   isAiGenerated   Boolean    @default(false)
   aiPrompt        String?
@@ -226,13 +233,11 @@ model AuditReport {
   socialAccount SocialAccount @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
 }
 
-// Adiciona isto ao teu prisma/schema.prisma (no final do ficheiro)
-
 model OnboardingResponse {
   id        String   @id @default(cuid())
   userId    String   @unique
   
-  // Respostas das perguntas (NOVO FORMATO)
+  // Respostas das perguntas
   business              String
   businessDescription   String
   audience              String
@@ -261,6 +266,3 @@ model OnboardingResponse {
   
   @@index([userId])
 }
-
-// Adiciona também esta linha no model User (nas relations):
-// onboarding OnboardingResponse?

@@ -9,7 +9,22 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { 
   Calendar, 
   Grid, 
@@ -25,12 +40,9 @@ import {
   Loader2, 
   Plus,
   Search,
-  Filter,
   MoreVertical,
   Eye,
-  CheckCircle,
-  AlertCircle,
-  PlayCircle,
+  CheckCircle2,
   Image as ImageIcon,
   Heart,
   MessageCircle,
@@ -38,7 +50,11 @@ import {
   Bookmark,
   Download,
   X,
-  Zap
+  ChevronLeft,
+  ChevronRight,
+  AlertCircle,
+  Sparkles,
+  PlusCircle
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
@@ -48,6 +64,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import axios from "axios";
 
 interface Post {
   id: string;
@@ -64,6 +81,8 @@ interface Post {
   scheduledAt?: string;
 }
 
+type Platform = 'instagram' | 'facebook' | 'linkedin' | 'twitter';
+
 export default function ContentHubPage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -74,21 +93,18 @@ export default function ContentHubPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'scheduled' | 'draft' | 'published'>('all');
-  const [previewPlatform, setPreviewPlatform] = useState<'instagram' | 'facebook' | 'linkedin' | 'twitter'>('instagram');
+  const [previewPlatform, setPreviewPlatform] = useState<Platform>('instagram');
   
-  // Estados para publicação
-  const [publishModalOpen, setPublishModalOpen] = useState(false);
-  const [postToPublish, setPostToPublish] = useState<Post | null>(null);
-  const [publishType, setPublishType] = useState<'now' | 'schedule'>('now');
-  const [scheduleDate, setScheduleDate] = useState('');
-  const [scheduleTime, setScheduleTime] = useState('');
-  const [publishing, setPublishing] = useState(false);
+  // Estados para criar post
+  const [creating, setCreating] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [postType, setPostType] = useState("educational");
+  const [topic, setTopic] = useState("");
+  const [customPrompt, setCustomPrompt] = useState("");
   
-  // Estados para editor inline e IA
+  // Estados para editor inline
   const [editingPost, setEditingPost] = useState<string | null>(null);
   const [editedCaption, setEditedCaption] = useState('');
-  const [aiSuggestions, setAiSuggestions] = useState<any>(null);
-  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
 
   useEffect(() => {
     loadPosts();
@@ -114,6 +130,109 @@ export default function ContentHubPage() {
     }
   };
 
+  const handleCreatePost = async () => {
+    if (!topic.trim()) {
+      toast({
+        title: "Erro",
+        description: "Por favor, insere um tópico para o post",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setCreating(true);
+
+    try {
+      const response = await axios.post("/api/posts/create", {
+        type: postType,
+        topic: topic.trim(),
+        customPrompt: customPrompt.trim() || undefined,
+      });
+
+      const newPost = response.data.post;
+      
+      // Formatar o post para o formato esperado
+      const formattedPost: Post = {
+        id: newPost.id,
+        title: newPost.hook || `Post ${newPost.type}`,
+        caption: newPost.caption || "",
+        type: newPost.type,
+        status: newPost.status,
+        image: newPost.imageUrl || "",
+        mediaUrls: newPost.imageUrl ? [newPost.imageUrl] : [],
+        date: "",
+        time: newPost.bestTimeToPost || "09:00",
+        platform: "instagram",
+        hashtags: newPost.hashtags || [],
+        scheduledAt: undefined,
+      };
+
+      setPosts([formattedPost, ...posts]);
+      setIsDialogOpen(false);
+      
+      // Limpar form
+      setTopic("");
+      setCustomPrompt("");
+      setPostType("educational");
+
+      toast({
+        title: "Post criado com sucesso! 🎉",
+        description: "O teu novo post está pronto para ser publicado.",
+      });
+    } catch (error: any) {
+      console.error("Erro ao criar post:", error);
+      toast({
+        title: "Erro ao criar post",
+        description: error.response?.data?.error || "Tenta novamente mais tarde.",
+        variant: "destructive",
+      });
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const startEditing = (post: Post) => {
+    setEditingPost(post.id);
+    setEditedCaption(post.caption || post.title || '');
+    setSelectedPost(post);
+  };
+
+  const saveEdit = async (postId: string) => {
+    try {
+      const response = await fetch(`/api/posts/${postId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ caption: editedCaption }),
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Caption atualizada! ✅",
+          description: "As alterações foram guardadas com sucesso.",
+        });
+
+        setPosts(posts.map(p => 
+          p.id === postId ? { ...p, caption: editedCaption } : p
+        ));
+
+        setEditingPost(null);
+      } else {
+        throw new Error('Erro ao atualizar');
+      }
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar a caption.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const cancelEdit = () => {
+    setEditingPost(null);
+    setEditedCaption('');
+  };
+
   const filteredPosts = posts.filter(post => {
     const matchesSearch = post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          post.caption?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -128,37 +247,10 @@ export default function ContentHubPage() {
   };
 
   const handlePublish = (post: Post) => {
-    setPostToPublish(post);
-    setPublishModalOpen(true);
-  };
-
-  const confirmPublish = async () => {
-    if (!postToPublish) return;
-    
-    setPublishing(true);
-    
-    try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      toast({
-        title: "Post publicado com sucesso! 🎉",
-        description: publishType === 'now' 
-          ? "O teu post foi publicado no Instagram"
-          : `Post agendado para ${scheduleDate} às ${scheduleTime}`,
-      });
-      
-      setPublishModalOpen(false);
-      setPostToPublish(null);
-      loadPosts();
-    } catch (error) {
-      toast({
-        title: "Erro ao publicar",
-        description: "Não foi possível publicar o post. Tenta novamente.",
-        variant: "destructive",
-      });
-    } finally {
-      setPublishing(false);
-    }
+    toast({
+      title: "A publicar...",
+      description: `Post a ser publicado no ${post.platform}`,
+    });
   };
 
   return (
@@ -171,11 +263,10 @@ export default function ContentHubPage() {
         notificationCount={stats.scheduled}
       />
 
-      {/* Subheader com filtros e ações */}
+      {/* Subheader */}
       <div className="bg-white border-b sticky top-16 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between gap-4">
-            {/* Search */}
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
@@ -186,7 +277,6 @@ export default function ContentHubPage() {
               />
             </div>
 
-            {/* Filtros */}
             <div className="flex items-center gap-2">
               <Button
                 variant={filterStatus === 'all' ? 'default' : 'outline'}
@@ -218,10 +308,9 @@ export default function ContentHubPage() {
               </Button>
             </div>
 
-            {/* Ações */}
             <div className="flex items-center gap-2">
               <Button
-                variant="outline"
+                variant={view === 'calendar' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setView(view === 'posts' ? 'calendar' : 'posts')}
                 className="gap-2"
@@ -229,22 +318,125 @@ export default function ContentHubPage() {
                 {view === 'posts' ? (
                   <>
                     <Calendar className="w-4 h-4" />
-                    Ver Calendário
+                    Calendário
                   </>
                 ) : (
                   <>
                     <Grid className="w-4 h-4" />
-                    Ver Posts
+                    Posts
                   </>
                 )}
               </Button>
-              <Button
-                className="gap-2"
-                onClick={() => router.push('/create-post')}
-              >
-                <Plus className="w-4 h-4" />
-                Criar Post
-              </Button>
+              
+              {/* BOTÃO CRIAR POST COM MODAL */}
+              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button className="gap-2">
+                    <Plus className="w-4 h-4" />
+                    Criar Post
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <Sparkles className="w-5 h-5 text-blue-600" />
+                      Criar Novo Post com IA
+                    </DialogTitle>
+                    <DialogDescription>
+                      A IA vai criar um post completo com imagem e texto otimizado
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div className="space-y-4 py-4">
+                    {/* Tipo de Post */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Tipo de Post</label>
+                      <Select value={postType} onValueChange={setPostType}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="educational">
+                            📚 Educativo - Ensina algo valioso
+                          </SelectItem>
+                          <SelectItem value="viral">
+                            🔥 Viral - Entretenimento/Relatable
+                          </SelectItem>
+                          <SelectItem value="sales">
+                            💰 Vendas - Converte em clientes
+                          </SelectItem>
+                          <SelectItem value="engagement">
+                            💬 Engagement - Gera conversa
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Tópico */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">
+                        Sobre o que queres criar?
+                      </label>
+                      <Input
+                        placeholder="Ex: Como aumentar produtividade..."
+                        value={topic}
+                        onChange={(e) => setTopic(e.target.value)}
+                      />
+                    </div>
+
+                    {/* Prompt Customizado (Opcional) */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">
+                        Instruções adicionais (opcional)
+                      </label>
+                      <Textarea
+                        placeholder="Ex: Foca em empreendedores, usa tom casual..."
+                        value={customPrompt}
+                        onChange={(e) => setCustomPrompt(e.target.value)}
+                        rows={3}
+                      />
+                    </div>
+
+                    <div className="bg-blue-50 p-4 rounded-lg text-sm text-blue-900">
+                      <p className="font-semibold mb-1">A IA vai criar:</p>
+                      <ul className="space-y-1 ml-4">
+                        <li>✓ Hook impactante</li>
+                        <li>✓ Caption completa com storytelling</li>
+                        <li>✓ Hashtags estratégicas</li>
+                        <li>✓ Call-to-action otimizado</li>
+                        <li>✓ Imagem gerada por IA</li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsDialogOpen(false)}
+                      className="flex-1"
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      onClick={handleCreatePost}
+                      disabled={creating || !topic.trim()}
+                      className="flex-1 bg-blue-600 hover:bg-blue-700"
+                    >
+                      {creating ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          A criar...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-4 h-4 mr-2" />
+                          Criar Post
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
         </div>
@@ -255,7 +447,7 @@ export default function ContentHubPage() {
           <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
         </div>
       ) : view === 'calendar' ? (
-        <CalendarView posts={filteredPosts} />
+        <CalendarView posts={filteredPosts} onSelectPost={setSelectedPost} />
       ) : (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -271,7 +463,7 @@ export default function ContentHubPage() {
                     <p className="text-gray-500 mb-6">
                       Começa a criar o teu primeiro post agora
                     </p>
-                    <Button onClick={() => router.push('/create-post')} className="gap-2">
+                    <Button onClick={() => setIsDialogOpen(true)} className="gap-2">
                       <Plus className="w-4 h-4" />
                       Criar Primeiro Post
                     </Button>
@@ -285,15 +477,21 @@ export default function ContentHubPage() {
                     onSelect={setSelectedPost}
                     isSelected={selectedPost?.id === post.id}
                     onPublish={handlePublish}
+                    editingPost={editingPost}
+                    editedCaption={editedCaption}
+                    setEditedCaption={setEditedCaption}
+                    startEditing={startEditing}
+                    saveEdit={saveEdit}
+                    cancelEdit={cancelEdit}
                   />
                 ))
               )}
             </div>
 
-            {/* Preview Sidebar */}
+            {/* Preview Multi-Plataforma */}
             <div className="lg:sticky lg:top-24 h-fit">
               {selectedPost ? (
-                <PostPreview
+                <MultiPlatformPreview
                   post={selectedPost}
                   platform={previewPlatform}
                   onPlatformChange={setPreviewPlatform}
@@ -319,20 +517,19 @@ export default function ContentHubPage() {
   );
 }
 
-// Card de Post na Lista
+// Post Card
 function PostCard({ 
   post, 
   onSelect, 
   isSelected,
-  onPublish
-}: { 
-  post: Post; 
-  onSelect: (post: Post) => void;
-  isSelected: boolean;
-  onPublish: (post: Post) => void;
-}) {
-  const router = useRouter();
-
+  onPublish,
+  editingPost,
+  editedCaption,
+  setEditedCaption,
+  startEditing,
+  saveEdit,
+  cancelEdit,
+}: any) {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'SCHEDULED': return 'bg-blue-100 text-blue-700 border-blue-200';
@@ -351,14 +548,9 @@ function PostCard({
     >
       <CardContent className="p-4">
         <div className="flex gap-4">
-          {/* Thumbnail */}
           <div className="relative w-24 h-24 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
             {post.image ? (
-              <img
-                src={post.image}
-                alt={post.title}
-                className="w-full h-full object-cover"
-              />
+              <img src={post.image} alt={post.title} className="w-full h-full object-cover" />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
                 <ImageIcon className="w-8 h-8 text-gray-400" />
@@ -371,14 +563,10 @@ function PostCard({
             )}
           </div>
 
-          {/* Conteúdo */}
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2 mb-2">
-              <h3 className="font-semibold text-gray-900 line-clamp-1">
-                {post.title}
-              </h3>
+              <h3 className="font-semibold text-gray-900 line-clamp-1">{post.title}</h3>
               <div className="flex items-center gap-1">
-                {/* Botão Publicar */}
                 <Button
                   variant="ghost"
                   size="sm"
@@ -392,7 +580,6 @@ function PostCard({
                   <span className="hidden sm:inline">Publicar</span>
                 </Button>
                 
-                {/* Menu de opções */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button 
@@ -407,10 +594,10 @@ function PostCard({
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={(e) => {
                       e.stopPropagation();
-                      router.push(`/create-post?edit=${post.id}`);
+                      startEditing(post);
                     }}>
                       <Edit className="w-4 h-4 mr-2" />
-                      Editar
+                      Editar Caption
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={(e) => {
                       e.stopPropagation();
@@ -436,9 +623,52 @@ function PostCard({
               </div>
             </div>
 
-            <p className="text-sm text-gray-600 line-clamp-2 mb-3">
-              {post.caption || post.title}
-            </p>
+            {editingPost === post.id ? (
+              <div className="space-y-2 mb-3">
+                <Textarea
+                  value={editedCaption}
+                  onChange={(e) => setEditedCaption(e.target.value)}
+                  className="min-h-[100px] text-sm"
+                  placeholder="Escreve a tua caption aqui..."
+                  autoFocus
+                  onClick={(e) => e.stopPropagation()}
+                />
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      saveEdit(post.id);
+                    }}
+                    className="flex-1"
+                  >
+                    <CheckCircle2 className="w-3 h-3 mr-1" />
+                    Guardar
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      cancelEdit();
+                    }}
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <p 
+                className="text-sm text-gray-600 line-clamp-2 mb-3 cursor-text hover:bg-gray-50 p-2 rounded transition-colors"
+                onDoubleClick={(e) => {
+                  e.stopPropagation();
+                  startEditing(post);
+                }}
+                title="Duplo clique para editar"
+              >
+                {post.caption || post.title}
+              </p>
+            )}
 
             <div className="flex items-center gap-2 flex-wrap">
               <Badge className={getStatusColor(post.status)}>
@@ -466,25 +696,254 @@ function PostCard({
   );
 }
 
-// Preview do Post com Multi-Plataforma
-function PostPreview({ 
-  post, 
-  platform,
-  onPlatformChange,
-  onClose 
-}: { 
-  post: Post;
-  platform: 'instagram' | 'facebook' | 'linkedin' | 'twitter';
-  onPlatformChange: (platform: 'instagram' | 'facebook' | 'linkedin' | 'twitter') => void;
-  onClose: () => void;
-}) {
-  const router = useRouter();
+// 📅 CALENDAR VIEW
+function CalendarView({ posts, onSelectPost }: { posts: Post[]; onSelectPost: (post: Post) => void }) {
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
+  const goToPreviousMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+  };
+
+  const goToNextMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+  };
+
+  const goToToday = () => {
+    setCurrentDate(new Date());
+    setSelectedDate(new Date());
+  };
+
+  const getDaysInMonth = () => {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDayOfWeek = firstDay.getDay();
+
+    const days = [];
+
+    for (let i = 0; i < startingDayOfWeek; i++) {
+      const prevMonthDay = new Date(year, month, -startingDayOfWeek + i + 1);
+      days.push({ date: prevMonthDay, isCurrentMonth: false });
+    }
+
+    for (let i = 1; i <= daysInMonth; i++) {
+      days.push({ date: new Date(year, month, i), isCurrentMonth: true });
+    }
+
+    const remainingDays = 42 - days.length;
+    for (let i = 1; i <= remainingDays; i++) {
+      days.push({ date: new Date(year, month + 1, i), isCurrentMonth: false });
+    }
+
+    return days;
+  };
+
+  const getPostsForDay = (date: Date) => {
+    return posts.filter(post => {
+      if (!post.scheduledAt && !post.date) return false;
+      const postDate = post.scheduledAt 
+        ? new Date(post.scheduledAt)
+        : new Date(post.date);
+      return (
+        postDate.getDate() === date.getDate() &&
+        postDate.getMonth() === date.getMonth() &&
+        postDate.getFullYear() === date.getFullYear()
+      );
+    });
+  };
+
+  const days = getDaysInMonth();
+  const monthName = currentDate.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' });
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const selectedDayPosts = selectedDate ? getPostsForDay(selectedDate) : [];
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <Card>
+            <CardHeader className="border-b">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-xl capitalize">{monthName}</CardTitle>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={goToToday}>Hoje</Button>
+                  <Button variant="outline" size="sm" onClick={goToPreviousMonth}>
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={goToNextMonth}>
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-4">
+              <div className="grid grid-cols-7 gap-2 mb-2">
+                {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(day => (
+                  <div key={day} className="text-center text-xs font-semibold text-gray-600 py-2">
+                    {day}
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-7 gap-2">
+                {days.map((day, index) => {
+                  const dayPosts = getPostsForDay(day.date);
+                  const isToday = day.date.getTime() === today.getTime();
+                  const isSelected = selectedDate && day.date.getTime() === selectedDate.getTime();
+                  const isPast = day.date < today;
+
+                  return (
+                    <button
+                      key={index}
+                      onClick={() => setSelectedDate(day.date)}
+                      className={`
+                        min-h-[80px] p-2 rounded-lg border-2 transition-all text-left
+                        ${!day.isCurrentMonth ? 'bg-gray-50 text-gray-400' : 'bg-white'}
+                        ${isToday ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}
+                        ${isSelected ? 'ring-2 ring-blue-500' : ''}
+                        ${isPast && day.isCurrentMonth ? 'opacity-60' : ''}
+                        hover:border-blue-300 hover:shadow-md
+                      `}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className={`text-sm font-semibold ${isToday ? 'text-blue-600' : ''}`}>
+                          {day.date.getDate()}
+                        </span>
+                        {dayPosts.length > 0 && (
+                          <Badge variant="secondary" className="text-xs h-5 px-1">
+                            {dayPosts.length}
+                          </Badge>
+                        )}
+                      </div>
+
+                      <div className="space-y-1">
+                        {dayPosts.slice(0, 2).map((post, idx) => (
+                          <div
+                            key={idx}
+                            className={`text-xs p-1 rounded truncate ${
+                              post.status === 'SCHEDULED'
+                                ? 'bg-blue-100 text-blue-700'
+                                : post.status === 'PUBLISHED'
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-gray-100 text-gray-700'
+                            }`}
+                          >
+                            {post.time} • {post.platform === 'instagram' ? '📸' : '💙'}
+                          </div>
+                        ))}
+                        {dayPosts.length > 2 && (
+                          <div className="text-xs text-gray-500">
+                            +{dayPosts.length - 2} mais
+                          </div>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="mt-4 flex items-center gap-4 text-sm">
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded bg-blue-100 border-2 border-blue-500" />
+              <span>Hoje</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded bg-blue-100" />
+              <span>Agendado</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded bg-green-100" />
+              <span>Publicado</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded bg-gray-100" />
+              <span>Rascunho</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="lg:sticky lg:top-24 h-fit">
+          <Card>
+            <CardHeader className="border-b">
+              <CardTitle className="text-lg">
+                {selectedDate ? (
+                  <>Posts de {selectedDate.getDate()}/{selectedDate.getMonth() + 1}</>
+                ) : (
+                  'Seleciona um dia'
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
+              {selectedDate ? (
+                selectedDayPosts.length > 0 ? (
+                  <div className="space-y-3">
+                    {selectedDayPosts.map(post => (
+                      <div
+                        key={post.id}
+                        onClick={() => onSelectPost(post)}
+                        className="p-3 border rounded-lg hover:border-blue-500 hover:shadow-md transition-all cursor-pointer"
+                      >
+                        <div className="flex items-start gap-3">
+                          {post.image ? (
+                            <img src={post.image} alt={post.title} className="w-16 h-16 rounded object-cover" />
+                          ) : (
+                            <div className="w-16 h-16 rounded bg-gray-100 flex items-center justify-center">
+                              <ImageIcon className="w-6 h-6 text-gray-400" />
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Badge variant={post.status === 'SCHEDULED' ? 'default' : post.status === 'PUBLISHED' ? 'default' : 'secondary'} className="text-xs">
+                                {post.status === 'SCHEDULED' && '📅'}
+                                {post.status === 'PUBLISHED' && '✅'}
+                                {post.status === 'DRAFT' && '📝'}
+                              </Badge>
+                              <span className="text-xs text-gray-500">{post.time}</span>
+                            </div>
+                            <h4 className="font-semibold text-sm line-clamp-1">{post.title}</h4>
+                            <p className="text-xs text-gray-600 line-clamp-2 mt-1">{post.caption}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-12 text-center">
+                    <AlertCircle className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+                    <p className="text-sm text-gray-500">Nenhum post agendado para este dia</p>
+                    <Button variant="outline" size="sm" className="mt-4" onClick={() => alert('Criar post para este dia')}>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Agendar Post
+                    </Button>
+                  </div>
+                )
+              ) : (
+                <div className="py-12 text-center">
+                  <Calendar className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+                  <p className="text-sm text-gray-500">Clica num dia do calendário para ver os posts agendados</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Multi-Platform Preview
+function MultiPlatformPreview({ post, platform, onPlatformChange, onClose }: { post: Post; platform: Platform; onPlatformChange: (platform: Platform) => void; onClose: () => void; }) {
   const platforms = [
-    { id: 'instagram', icon: Instagram, name: 'Instagram', color: 'text-pink-600' },
-    { id: 'facebook', icon: Facebook, name: 'Facebook', color: 'text-blue-600' },
-    { id: 'linkedin', icon: Linkedin, name: 'LinkedIn', color: 'text-blue-700' },
-    { id: 'twitter', icon: Twitter, name: 'Twitter', color: 'text-sky-500' },
+    { id: 'instagram' as Platform, icon: Instagram, name: 'Instagram', color: 'text-pink-600' },
+    { id: 'facebook' as Platform, icon: Facebook, name: 'Facebook', color: 'text-blue-600' },
+    { id: 'linkedin' as Platform, icon: Linkedin, name: 'LinkedIn', color: 'text-blue-700' },
+    { id: 'twitter' as Platform, icon: Twitter, name: 'X', color: 'text-gray-900' },
   ];
 
   return (
@@ -492,21 +951,19 @@ function PostPreview({
       <CardHeader className="pb-3 border-b">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg">Preview</CardTitle>
-          <Button variant="ghost" size="sm" onClick={onClose}>✕</Button>
+          <Button variant="ghost" size="sm" onClick={onClose}>
+            <X className="w-4 h-4" />
+          </Button>
         </div>
-
-        {/* Platform Selector */}
         <div className="grid grid-cols-4 gap-2 mt-4">
           {platforms.map((p) => {
             const Icon = p.icon;
             return (
               <button
                 key={p.id}
-                onClick={() => onPlatformChange(p.id as any)}
+                onClick={() => onPlatformChange(p.id)}
                 className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-all ${
-                  platform === p.id
-                    ? 'bg-blue-50 ring-2 ring-blue-500'
-                    : 'bg-gray-50 hover:bg-gray-100'
+                  platform === p.id ? 'bg-blue-50 ring-2 ring-blue-500' : 'bg-gray-50 hover:bg-gray-100'
                 }`}
               >
                 <Icon className={`w-5 h-5 ${platform === p.id ? p.color : 'text-gray-400'}`} />
@@ -516,232 +973,180 @@ function PostPreview({
           })}
         </div>
       </CardHeader>
-
       <CardContent className="p-4">
-        {/* Instagram Preview */}
-        {platform === 'instagram' && (
-          <div className="bg-white border rounded-xl overflow-hidden shadow-sm">
-            {/* Header */}
-            <div className="flex items-center gap-3 p-3 border-b">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-400 to-pink-400" />
-              <div className="flex-1">
-                <div className="font-semibold text-sm">seu_perfil</div>
-                <div className="text-xs text-gray-500">Lisboa, Portugal</div>
-              </div>
-              <MoreVertical className="w-5 h-5 text-gray-600" />
-            </div>
-
-            {/* Image */}
-            <div className="aspect-square bg-gray-100">
-              {post.image ? (
-                <img src={post.image} alt={post.title} className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <Instagram className="w-16 h-16 text-gray-400" />
-                </div>
-              )}
-            </div>
-
-            {/* Actions */}
-            <div className="p-3 space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex gap-4">
-                  <Heart className="w-6 h-6" />
-                  <MessageCircle className="w-6 h-6" />
-                  <Send className="w-6 h-6" />
-                </div>
-                <Bookmark className="w-6 h-6" />
-              </div>
-
-              <div className="text-sm font-semibold">1,234 gostos</div>
-              
-              <div className="text-sm">
-                <span className="font-semibold">seu_perfil</span>{' '}
-                {post.caption || post.title}
-              </div>
-
-              {post.hashtags && post.hashtags.length > 0 && (
-                <div className="text-sm text-blue-600">
-                  {post.hashtags.map(tag => `#${tag}`).join(' ')}
-                </div>
-              )}
-
-              <div className="text-xs text-gray-500">
-                {post.scheduledAt ? new Date(post.scheduledAt).toLocaleDateString('pt-PT') : 'Agora'}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Facebook Preview */}
-        {platform === 'facebook' && (
-          <div className="bg-white border rounded-xl overflow-hidden shadow-sm">
-            <div className="p-3 border-b">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-blue-500" />
-                <div className="flex-1">
-                  <div className="font-semibold text-sm">Seu Nome</div>
-                  <div className="text-xs text-gray-500">
-                    {post.scheduledAt ? new Date(post.scheduledAt).toLocaleDateString('pt-PT') : 'Agora'} • 🌍
-                  </div>
-                </div>
-                <MoreVertical className="w-5 h-5 text-gray-600" />
-              </div>
-              <div className="mt-3 text-sm">
-                {post.caption || post.title}
-              </div>
-            </div>
-            
-            {post.image && (
-              <div className="aspect-video bg-gray-100">
-                <img src={post.image} alt={post.title} className="w-full h-full object-cover" />
-              </div>
-            )}
-
-            <div className="p-3 flex items-center justify-around border-t">
-              <Button variant="ghost" size="sm" className="gap-2">
-                <Heart className="w-4 h-4" /> Gosto
-              </Button>
-              <Button variant="ghost" size="sm" className="gap-2">
-                <MessageCircle className="w-4 h-4" /> Comentar
-              </Button>
-              <Button variant="ghost" size="sm" className="gap-2">
-                <Share2 className="w-4 h-4" /> Partilhar
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* LinkedIn Preview */}
-        {platform === 'linkedin' && (
-          <div className="bg-white border rounded-xl overflow-hidden shadow-sm">
-            <div className="p-3">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-12 h-12 rounded-full bg-blue-700" />
-                <div className="flex-1">
-                  <div className="font-semibold text-sm">Seu Nome</div>
-                  <div className="text-xs text-gray-500">Cargo • Empresa</div>
-                  <div className="text-xs text-gray-500">
-                    {post.scheduledAt ? new Date(post.scheduledAt).toLocaleDateString('pt-PT') : 'Agora'} • 🌍
-                  </div>
-                </div>
-                <MoreVertical className="w-5 h-5 text-gray-600" />
-              </div>
-              
-              <div className="text-sm mb-3">
-                {post.caption || post.title}
-              </div>
-            </div>
-
-            {post.image && (
-              <div className="aspect-video bg-gray-100">
-                <img src={post.image} alt={post.title} className="w-full h-full object-cover" />
-              </div>
-            )}
-
-            <div className="p-3 flex items-center justify-around border-t">
-              <Button variant="ghost" size="sm" className="gap-2">
-                <Heart className="w-4 h-4" /> Gosto
-              </Button>
-              <Button variant="ghost" size="sm" className="gap-2">
-                <MessageCircle className="w-4 h-4" /> Comentar
-              </Button>
-              <Button variant="ghost" size="sm" className="gap-2">
-                <Share2 className="w-4 h-4" /> Partilhar
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Twitter Preview */}
-        {platform === 'twitter' && (
-          <div className="bg-white border rounded-xl overflow-hidden shadow-sm">
-            <div className="p-3">
-              <div className="flex gap-3">
-                <div className="w-12 h-12 rounded-full bg-sky-500 flex-shrink-0" />
-                <div className="flex-1">
-                  <div className="flex items-center gap-1 mb-1">
-                    <span className="font-bold text-sm">Seu Nome</span>
-                    <span className="text-gray-500 text-sm">@seuperfil</span>
-                    <span className="text-gray-500 text-sm">·</span>
-                    <span className="text-gray-500 text-sm">
-                      {post.scheduledAt ? new Date(post.scheduledAt).toLocaleDateString('pt-PT') : 'agora'}
-                    </span>
-                  </div>
-                  
-                  <div className="text-sm mb-3">
-                    {post.caption || post.title}
-                  </div>
-
-                  {post.image && (
-                    <div className="rounded-xl overflow-hidden border mb-3">
-                      <img src={post.image} alt={post.title} className="w-full" />
-                    </div>
-                  )}
-
-                  <div className="flex items-center justify-around text-gray-500">
-                    <button className="flex items-center gap-2 hover:text-sky-500">
-                      <MessageCircle className="w-4 h-4" />
-                      <span className="text-xs">23</span>
-                    </button>
-                    <button className="flex items-center gap-2 hover:text-green-500">
-                      <Share2 className="w-4 h-4" />
-                      <span className="text-xs">12</span>
-                    </button>
-                    <button className="flex items-center gap-2 hover:text-pink-500">
-                      <Heart className="w-4 h-4" />
-                      <span className="text-xs">234</span>
-                    </button>
-                    <button className="hover:text-sky-500">
-                      <Download className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Ações */}
-        <div className="mt-4 space-y-2">
-          <Button 
-            className="w-full gap-2"
-            onClick={() => router.push(`/create-post?edit=${post.id}`)}
-          >
-            <Edit className="w-4 h-4" />
-            Editar Post
-          </Button>
-          <div className="grid grid-cols-2 gap-2">
-            <Button variant="outline" className="gap-2">
-              <Copy className="w-4 h-4" />
-              Duplicar
-            </Button>
-            <Button variant="outline" className="gap-2 text-red-600 hover:text-red-700">
-              <Trash2 className="w-4 h-4" />
-              Eliminar
-            </Button>
-          </div>
-        </div>
+        {platform === 'instagram' && <InstagramPreview post={post} />}
+        {platform === 'facebook' && <FacebookPreview post={post} />}
+        {platform === 'linkedin' && <LinkedInPreview post={post} />}
+        {platform === 'twitter' && <TwitterPreview post={post} />}
       </CardContent>
     </Card>
   );
 }
 
-// Placeholder para Calendar View
-function CalendarView({ posts }: { posts: Post[] }) {
+// Instagram Preview
+function InstagramPreview({ post }: { post: Post }) {
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-      <Card>
-        <CardContent className="py-16 text-center">
-          <Calendar className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            Vista de Calendário
-          </h3>
-          <p className="text-gray-500">
-            Em desenvolvimento...
-          </p>
-        </CardContent>
-      </Card>
+    <div className="bg-white border rounded-xl overflow-hidden shadow-sm">
+      <div className="flex items-center gap-3 p-3 border-b">
+        <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-400 to-pink-400" />
+        <div className="flex-1">
+          <div className="font-semibold text-sm">seu_perfil</div>
+          <div className="text-xs text-gray-500">Lisboa, Portugal</div>
+        </div>
+        <MoreVertical className="w-5 h-5 text-gray-600" />
+      </div>
+      <div className="aspect-square bg-gray-100">
+        {post.image ? (
+          <img src={post.image} alt={post.title} className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <Instagram className="w-16 h-16 text-gray-400" />
+          </div>
+        )}
+      </div>
+      <div className="p-3 space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="flex gap-4">
+            <Heart className="w-6 h-6" />
+            <MessageCircle className="w-6 h-6" />
+            <Send className="w-6 h-6" />
+          </div>
+          <Bookmark className="w-6 h-6" />
+        </div>
+        <div className="text-sm font-semibold">1,234 gostos</div>
+        <div className="text-sm">
+          <span className="font-semibold">seu_perfil</span> {post.caption || post.title}
+        </div>
+        {post.hashtags && post.hashtags.length > 0 && (
+          <div className="text-sm text-blue-600">
+            {post.hashtags.map(tag => `${tag}`).join(' ')}
+          </div>
+        )}
+        <div className="text-xs text-gray-500">
+          {post.scheduledAt ? new Date(post.scheduledAt).toLocaleDateString('pt-PT') : 'Agora'}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Facebook Preview
+function FacebookPreview({ post }: { post: Post }) {
+  return (
+    <div className="bg-white border rounded-xl overflow-hidden shadow-sm">
+      <div className="p-3 border-b">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-blue-500" />
+          <div className="flex-1">
+            <div className="font-semibold text-sm">Seu Nome</div>
+            <div className="text-xs text-gray-500">
+              {post.scheduledAt ? new Date(post.scheduledAt).toLocaleDateString('pt-PT') : 'Agora'} • 🌍
+            </div>
+          </div>
+          <MoreVertical className="w-5 h-5 text-gray-600" />
+        </div>
+        <div className="mt-3 text-sm">{post.caption || post.title}</div>
+      </div>
+      {post.image && (
+        <div className="aspect-video bg-gray-100">
+          <img src={post.image} alt={post.title} className="w-full h-full object-cover" />
+        </div>
+      )}
+      <div className="p-3 flex items-center justify-around border-t">
+        <Button variant="ghost" size="sm" className="gap-2">
+          <Heart className="w-4 h-4" /> Gosto
+        </Button>
+        <Button variant="ghost" size="sm" className="gap-2">
+          <MessageCircle className="w-4 h-4" /> Comentar
+        </Button>
+        <Button variant="ghost" size="sm" className="gap-2">
+          <Share2 className="w-4 h-4" /> Partilhar
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// LinkedIn Preview
+function LinkedInPreview({ post }: { post: Post }) {
+  return (
+    <div className="bg-white border rounded-xl overflow-hidden shadow-sm">
+      <div className="p-3">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-12 h-12 rounded-full bg-blue-700" />
+          <div className="flex-1">
+            <div className="font-semibold text-sm">Seu Nome</div>
+            <div className="text-xs text-gray-500">Cargo • Empresa</div>
+            <div className="text-xs text-gray-500">
+              {post.scheduledAt ? new Date(post.scheduledAt).toLocaleDateString('pt-PT') : 'Agora'} • 🌍
+            </div>
+          </div>
+          <MoreVertical className="w-5 h-5 text-gray-600" />
+        </div>
+        <div className="text-sm mb-3">{post.caption || post.title}</div>
+      </div>
+      {post.image && (
+        <div className="aspect-video bg-gray-100">
+          <img src={post.image} alt={post.title} className="w-full h-full object-cover" />
+        </div>
+      )}
+      <div className="p-3 flex items-center justify-around border-t">
+        <Button variant="ghost" size="sm" className="gap-2">
+          <Heart className="w-4 h-4" /> Gosto
+        </Button>
+        <Button variant="ghost" size="sm" className="gap-2">
+          <MessageCircle className="w-4 h-4" /> Comentar
+        </Button>
+        <Button variant="ghost" size="sm" className="gap-2">
+          <Share2 className="w-4 h-4" /> Partilhar
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// Twitter/X Preview
+function TwitterPreview({ post }: { post: Post }) {
+  return (
+    <div className="bg-white border rounded-xl overflow-hidden shadow-sm">
+      <div className="p-3">
+        <div className="flex gap-3">
+          <div className="w-12 h-12 rounded-full bg-gray-900 flex-shrink-0" />
+          <div className="flex-1">
+            <div className="flex items-center gap-1 mb-1">
+              <span className="font-bold text-sm">Seu Nome</span>
+              <span className="text-gray-500 text-sm">@seuperfil</span>
+              <span className="text-gray-500 text-sm">·</span>
+              <span className="text-gray-500 text-sm">
+                {post.scheduledAt ? new Date(post.scheduledAt).toLocaleDateString('pt-PT') : 'agora'}
+              </span>
+            </div>
+            <div className="text-sm mb-3">{post.caption || post.title}</div>
+            {post.image && (
+              <div className="rounded-xl overflow-hidden border mb-3">
+                <img src={post.image} alt={post.title} className="w-full" />
+              </div>
+            )}
+            <div className="flex items-center justify-around text-gray-500">
+              <button className="flex items-center gap-2 hover:text-sky-500">
+                <MessageCircle className="w-4 h-4" />
+                <span className="text-xs">23</span>
+              </button>
+              <button className="flex items-center gap-2 hover:text-green-500">
+                <Share2 className="w-4 h-4" />
+                <span className="text-xs">12</span>
+              </button>
+              <button className="flex items-center gap-2 hover:text-pink-500">
+                <Heart className="w-4 h-4" />
+                <span className="text-xs">234</span>
+              </button>
+              <button className="hover:text-sky-500">
+                <Download className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

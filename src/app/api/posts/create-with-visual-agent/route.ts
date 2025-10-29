@@ -174,27 +174,36 @@ FORMATO JSON:
     }
 
     // 6️⃣ CRIAR POST NA BASE DE DADOS (DEPOIS de ter a URL permanente)
-    const post = await prisma.post.create({
-      data: {
-        userId: user.id,
-        type: type.toUpperCase(),
-        caption: captionData.caption || "Caption gerada",
-        hook: captionData.hook,
-        hashtags: JSON.stringify(captionData.hashtags || []),
-        cta: captionData.cta,
-        imageUrl: permanentImageUrl, // ✅ Agora já está definido
-        imagePrompt: imagePrompt,
-        bestTimeToPost: captionData.bestTimeToPost || "09:00",
-        status: "DRAFT",
-        platform: "INSTAGRAM",
-        isAiGenerated: true,
-        mediaUrls: JSON.stringify([permanentImageUrl]), // ✅ Array
-        thumbnailUrl: permanentImageUrl, // ✅ Thumbnail
-        estimatedEngagement: "médio",
-      },
-    });
+    const bestTime = captionData.bestTimeToPost || "09:00";
+const [hours, minutes] = bestTime.split(":").map(Number);
 
-    console.log(`✅ Post criado: ${post.id}`);
+// Agendar para amanhã no horário recomendado
+const scheduledDate = new Date();
+scheduledDate.setDate(scheduledDate.getDate() + 1); // Amanhã
+scheduledDate.setHours(hours, minutes, 0, 0);
+
+const post = await prisma.post.create({
+  data: {
+    userId: user.id,
+    type: type.toUpperCase(),
+    caption: captionData.caption || "Caption gerada",
+    hook: captionData.hook,
+    hashtags: JSON.stringify(captionData.hashtags || []),
+    cta: captionData.cta,
+    imageUrl: permanentImageUrl,
+    imagePrompt: imagePrompt,
+    bestTimeToPost: bestTime,
+    status: "SCHEDULED", // ✅ CORRIGIDO
+    scheduledAt: scheduledDate, // ✅ ADICIONADO
+    platform: "INSTAGRAM",
+    isAiGenerated: true,
+    mediaUrls: JSON.stringify([permanentImageUrl]),
+    thumbnailUrl: permanentImageUrl,
+    estimatedEngagement: "médio",
+  },
+});
+
+console.log(`✅ Post criado: ${post.id} - Agendado para ${scheduledDate.toLocaleString("pt-PT")}`);
 
     return NextResponse.json({
       success: true,

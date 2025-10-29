@@ -1,4 +1,3 @@
-// src/app/(dashboard)/content-hub/page.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -55,6 +54,10 @@ import {
   AlertCircle,
   Sparkles,
   PlusCircle,
+  Info,
+  ArrowLeft,
+  Save,
+  ChevronDown,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
@@ -65,6 +68,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import axios from "axios";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface Post {
   id: string;
@@ -83,6 +87,350 @@ interface Post {
 
 type Platform = "instagram" | "facebook" | "linkedin" | "twitter";
 
+// 🆕 MODAL DE PUBLICAÇÃO PROFISSIONAL
+function PublishModal({
+  isOpen,
+  onClose,
+  post,
+  onPublish,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  post: Post | null;
+  onPublish: (data: any) => void;
+}) {
+  const [publishOption, setPublishOption] = useState<
+    "now" | "schedule" | "draft"
+  >("now");
+  const [scheduleDate, setScheduleDate] = useState("");
+  const [scheduleTime, setScheduleTime] = useState("09:00");
+  const [showPreview, setShowPreview] = useState(false);
+
+  const today = new Date().toISOString().split("T")[0];
+
+  const recommendedTimes = [
+    { time: "09:00", label: "9:00 AM", reason: "Manhã - Alto engagement" },
+    { time: "13:00", label: "1:00 PM", reason: "Almoço - Pico de atividade" },
+    { time: "19:00", label: "7:00 PM", reason: "Noite - Melhor horário" },
+    { time: "21:00", label: "9:00 PM", reason: "Prime time social" },
+  ];
+
+  const handlePublish = () => {
+    if (publishOption === "schedule" && !scheduleDate) {
+      alert("Por favor, seleciona uma data para agendar.");
+      return;
+    }
+
+    onPublish({
+      option: publishOption,
+      scheduleDate: publishOption === "schedule" ? scheduleDate : undefined,
+      scheduleTime: publishOption === "schedule" ? scheduleTime : undefined,
+    });
+    onClose();
+  };
+
+  if (!isOpen || !post) return null;
+
+  return (
+    <AnimatePresence>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+          transition={{ duration: 0.2 }}
+          className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between z-10">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">
+                Publicar Post
+              </h2>
+              <p className="text-sm text-gray-600 mt-1">{post.title}</p>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+          </div>
+
+          {/* Content */}
+          <div className="p-6 space-y-6">
+            {/* Preview do Post */}
+            <div className="p-4 bg-gray-50 rounded-lg border">
+              <div className="flex items-start gap-3">
+                {post.image && (
+                  <img
+                    src={post.image}
+                    alt={post.title}
+                    className="w-20 h-20 rounded-lg object-cover"
+                  />
+                )}
+                <div className="flex-1">
+                  <h3 className="font-semibold text-gray-900 mb-1">
+                    {post.title}
+                  </h3>
+                  <p className="text-sm text-gray-600 line-clamp-2">
+                    {post.caption}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Opções de Publicação */}
+            <div className="space-y-3">
+              <label className="text-sm font-semibold text-gray-700 block mb-3">
+                Como queres publicar?
+              </label>
+
+              {/* Publicar Agora */}
+              <button
+                onClick={() => setPublishOption("now")}
+                className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
+                  publishOption === "now"
+                    ? "border-purple-500 bg-purple-50 shadow-md"
+                    : "border-gray-200 hover:border-gray-300 bg-white"
+                }`}
+              >
+                <div className="flex items-start gap-4">
+                  <div
+                    className={`p-3 rounded-lg ${
+                      publishOption === "now"
+                        ? "bg-purple-500 text-white"
+                        : "bg-gray-100 text-gray-600"
+                    }`}
+                  >
+                    <Send className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-semibold text-gray-900">
+                        Publicar Agora
+                      </h3>
+                      <Badge className="bg-purple-100 text-purple-700 text-xs">
+                        Recomendado
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      O post será publicado imediatamente no Instagram
+                    </p>
+                  </div>
+                  {publishOption === "now" && (
+                    <CheckCircle2 className="w-6 h-6 text-purple-600 flex-shrink-0" />
+                  )}
+                </div>
+              </button>
+
+              {/* Agendar */}
+              <button
+                onClick={() => setPublishOption("schedule")}
+                className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
+                  publishOption === "schedule"
+                    ? "border-purple-500 bg-purple-50 shadow-md"
+                    : "border-gray-200 hover:border-gray-300 bg-white"
+                }`}
+              >
+                <div className="flex items-start gap-4">
+                  <div
+                    className={`p-3 rounded-lg ${
+                      publishOption === "schedule"
+                        ? "bg-purple-500 text-white"
+                        : "bg-gray-100 text-gray-600"
+                    }`}
+                  >
+                    <Calendar className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-gray-900 mb-1">
+                      Agendar Publicação
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      Escolhe a melhor data e hora para publicar
+                    </p>
+                  </div>
+                  {publishOption === "schedule" && (
+                    <CheckCircle2 className="w-6 h-6 text-purple-600 flex-shrink-0" />
+                  )}
+                </div>
+              </button>
+
+              {/* Guardar como Rascunho */}
+              <button
+                onClick={() => setPublishOption("draft")}
+                className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
+                  publishOption === "draft"
+                    ? "border-gray-500 bg-gray-50 shadow-md"
+                    : "border-gray-200 hover:border-gray-300 bg-white"
+                }`}
+              >
+                <div className="flex items-start gap-4">
+                  <div
+                    className={`p-3 rounded-lg ${
+                      publishOption === "draft"
+                        ? "bg-gray-600 text-white"
+                        : "bg-gray-100 text-gray-600"
+                    }`}
+                  >
+                    <Save className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-gray-900 mb-1">
+                      Guardar como Rascunho
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      Revê e edita antes de publicar manualmente
+                    </p>
+                  </div>
+                  {publishOption === "draft" && (
+                    <CheckCircle2 className="w-6 h-6 text-gray-600 flex-shrink-0" />
+                  )}
+                </div>
+              </button>
+            </div>
+
+            {/* Opções de Agendamento */}
+            {publishOption === "schedule" && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="space-y-4 pt-4 border-t"
+              >
+                <div className="flex items-start gap-2 p-3 bg-purple-50 rounded-lg border border-purple-200">
+                  <Info className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-purple-800">
+                    <strong>Dica:</strong> Posts publicados nos horários
+                    recomendados têm até 3x mais engagement!
+                  </p>
+                </div>
+
+                {/* Data */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Data de Publicação
+                  </label>
+                  <Input
+                    type="date"
+                    value={scheduleDate}
+                    onChange={(e) => setScheduleDate(e.target.value)}
+                    min={today}
+                    className="w-full"
+                  />
+                </div>
+
+                {/* Horários Recomendados */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    Horário (Horários Recomendados)
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {recommendedTimes.map((slot) => (
+                      <button
+                        key={slot.time}
+                        onClick={() => setScheduleTime(slot.time)}
+                        className={`p-3 rounded-lg border-2 transition-all text-left ${
+                          scheduleTime === slot.time
+                            ? "border-purple-500 bg-purple-50"
+                            : "border-gray-200 hover:border-gray-300 bg-white"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <Clock className="w-4 h-4 text-gray-600" />
+                          <span className="font-semibold text-gray-900">
+                            {slot.label}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-600">{slot.reason}</p>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Horário Custom */}
+                  <div className="mt-3">
+                    <label className="block text-xs text-gray-600 mb-2">
+                      Ou escolhe um horário personalizado:
+                    </label>
+                    <Input
+                      type="time"
+                      value={scheduleTime}
+                      onChange={(e) => setScheduleTime(e.target.value)}
+                      className="w-full"
+                    />
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Preview Toggle */}
+            <button
+              onClick={() => setShowPreview(!showPreview)}
+              className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <Eye className="w-5 h-5 text-gray-600" />
+                <span className="font-medium text-gray-900">
+                  {showPreview ? "Ocultar" : "Ver"} Preview no Instagram
+                </span>
+              </div>
+              <ChevronDown
+                className={`w-5 h-5 text-gray-600 transition-transform ${
+                  showPreview ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+
+            {/* Preview */}
+            {showPreview && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                className="pt-2"
+              >
+                <InstagramPreview post={post} />
+              </motion.div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="sticky bottom-0 bg-gray-50 border-t px-6 py-4 flex items-center justify-between">
+            <Button variant="outline" onClick={onClose} className="gap-2">
+              <ArrowLeft className="w-4 h-4" />
+              Cancelar
+            </Button>
+            <Button
+              onClick={handlePublish}
+              className="gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+            >
+              {publishOption === "now" && (
+                <>
+                  <Send className="w-4 h-4" />
+                  Publicar Agora
+                </>
+              )}
+              {publishOption === "schedule" && (
+                <>
+                  <Calendar className="w-4 h-4" />
+                  Agendar Publicação
+                </>
+              )}
+              {publishOption === "draft" && (
+                <>
+                  <Save className="w-4 h-4" />
+                  Guardar Rascunho
+                </>
+              )}
+            </Button>
+          </div>
+        </motion.div>
+      </div>
+    </AnimatePresence>
+  );
+}
+
 export default function ContentHubPage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -96,6 +444,10 @@ export default function ContentHubPage() {
     "all" | "scheduled" | "draft" | "published"
   >("all");
   const [previewPlatform, setPreviewPlatform] = useState<Platform>("instagram");
+
+  // 🆕 Estados para modal de publicação
+  const [publishModalOpen, setPublishModalOpen] = useState(false);
+  const [postToPublish, setPostToPublish] = useState<Post | null>(null);
 
   // Estados para criar post
   const [creating, setCreating] = useState(false);
@@ -122,7 +474,6 @@ export default function ContentHubPage() {
         const data = await response.json();
         console.log(`✅ ${data.posts?.length || 0} posts recebidos`);
 
-        // Debug detalhado dos primeiros 3 posts
         if (data.posts && data.posts.length > 0) {
           data.posts.slice(0, 3).forEach((post: any, index: number) => {
             console.log(`🔍 Post ${index + 1}:`, {
@@ -172,12 +523,10 @@ export default function ContentHubPage() {
         },
       });
 
-      // ✅ SOLUÇÃO: Apenas recarregar todos os posts da BD
-      await loadPosts(); // <-- Isto já traz o novo post
+      await loadPosts();
 
       setIsDialogOpen(false);
 
-      // Limpar form
       setTopic("");
       setCustomPrompt("");
       setPostType("educational");
@@ -255,10 +604,8 @@ export default function ContentHubPage() {
           description: "O post foi removido com sucesso.",
         });
 
-        // Remover post da lista
         setPosts(posts.filter((p) => p.id !== postId));
 
-        // Se estava selecionado, remover seleção
         if (selectedPost?.id === postId) {
           setSelectedPost(null);
         }
@@ -276,6 +623,34 @@ export default function ContentHubPage() {
     }
   };
 
+  // 🆕 Abrir modal de publicação
+  const openPublishModal = (post: Post) => {
+    setPostToPublish(post);
+    setPublishModalOpen(true);
+  };
+
+  // 🆕 Handler de publicação
+  const handlePublishConfirm = async (publishData: any) => {
+    console.log("📤 Publicando post:", postToPublish?.id, publishData);
+
+    toast({
+      title: "Post publicado! 🎉",
+      description: `O post foi ${
+        publishData.option === "now"
+          ? "publicado imediatamente"
+          : publishData.option === "schedule"
+          ? `agendado para ${publishData.scheduleDate} às ${publishData.scheduleTime}`
+          : "guardado como rascunho"
+      }`,
+    });
+
+    // Aqui podes fazer a chamada à API para publicar
+    // await axios.post(`/api/posts/${postToPublish?.id}/publish`, publishData);
+
+    setPublishModalOpen(false);
+    setPostToPublish(null);
+  };
+
   const filteredPosts = posts.filter((post) => {
     const matchesSearch =
       post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -291,15 +666,19 @@ export default function ContentHubPage() {
     published: posts.filter((p) => p.status === "PUBLISHED").length,
   };
 
-  const handlePublish = (post: Post) => {
-    toast({
-      title: "A publicar...",
-      description: `Post a ser publicado no ${post.platform}`,
-    });
-  };
-
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* 🆕 Modal de Publicação */}
+      <PublishModal
+        isOpen={publishModalOpen}
+        onClose={() => {
+          setPublishModalOpen(false);
+          setPostToPublish(null);
+        }}
+        post={postToPublish}
+        onPublish={handlePublishConfirm}
+      />
+
       <HeaderPremium
         pageTitle="Content Hub"
         userName={session?.user?.name || "User"}
@@ -373,10 +752,9 @@ export default function ContentHubPage() {
                 )}
               </Button>
 
-              {/* BOTÃO CRIAR POST COM MODAL */}
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button className="gap-2">
+                  <Button className="gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
                     <Plus className="w-4 h-4" />
                     Criar Post
                   </Button>
@@ -384,7 +762,7 @@ export default function ContentHubPage() {
                 <DialogContent className="max-w-2xl">
                   <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
-                      <Sparkles className="w-5 h-5 text-blue-600" />
+                      <Sparkles className="w-5 h-5 text-purple-600" />
                       Criar Novo Post com IA
                     </DialogTitle>
                     <DialogDescription>
@@ -394,7 +772,6 @@ export default function ContentHubPage() {
                   </DialogHeader>
 
                   <div className="space-y-4 py-4">
-                    {/* Tipo de Post */}
                     <div className="space-y-2">
                       <label className="text-sm font-medium">
                         Tipo de Post
@@ -420,7 +797,6 @@ export default function ContentHubPage() {
                       </Select>
                     </div>
 
-                    {/* Tópico */}
                     <div className="space-y-2">
                       <label className="text-sm font-medium">
                         Sobre o que queres criar?
@@ -432,7 +808,6 @@ export default function ContentHubPage() {
                       />
                     </div>
 
-                    {/* Prompt Customizado (Opcional) */}
                     <div className="space-y-2">
                       <label className="text-sm font-medium">
                         Instruções adicionais (opcional)
@@ -468,7 +843,7 @@ export default function ContentHubPage() {
                     <Button
                       onClick={handleCreatePost}
                       disabled={creating || !topic.trim()}
-                      className="flex-1 bg-blue-600 hover:bg-blue-700"
+                      className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
                     >
                       {creating ? (
                         <>
@@ -499,7 +874,6 @@ export default function ContentHubPage() {
       ) : (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Lista de Posts */}
             <div className="lg:col-span-2 space-y-4">
               {filteredPosts.length === 0 ? (
                 <Card>
@@ -527,8 +901,8 @@ export default function ContentHubPage() {
                     post={post}
                     onSelect={setSelectedPost}
                     isSelected={selectedPost?.id === post.id}
-                    onPublish={handlePublish}
-                    onDelete={handleDeletePost} // ✅ Adicionar esta linha
+                    onPublish={openPublishModal} // 🆕 Abrir modal
+                    onDelete={handleDeletePost}
                     editingPost={editingPost}
                     editedCaption={editedCaption}
                     setEditedCaption={setEditedCaption}
@@ -540,7 +914,6 @@ export default function ContentHubPage() {
               )}
             </div>
 
-            {/* Preview Multi-Plataforma */}
             <div className="lg:sticky lg:top-24 h-fit">
               {selectedPost ? (
                 <MultiPlatformPreview
@@ -569,13 +942,13 @@ export default function ContentHubPage() {
   );
 }
 
-// Post Card
+// Post Card (resto do código continua igual...)
 function PostCard({
   post,
   onSelect,
   isSelected,
   onPublish,
-  onDelete, // ✅ Adicionar esta linha
+  onDelete,
   editingPost,
   editedCaption,
   setEditedCaption,
@@ -586,7 +959,7 @@ function PostCard({
   const getStatusColor = (status: string) => {
     switch (status) {
       case "SCHEDULED":
-        return "bg-blue-100 text-blue-700 border-blue-200";
+        return "bg-purple-100 text-purple-700 border-purple-200";
       case "PUBLISHED":
         return "bg-green-100 text-green-700 border-green-200";
       case "DRAFT":
@@ -599,7 +972,7 @@ function PostCard({
   return (
     <Card
       className={`cursor-pointer transition-all hover:shadow-lg ${
-        isSelected ? "ring-2 ring-blue-500 shadow-lg" : ""
+        isSelected ? "ring-2 ring-purple-500 shadow-lg" : ""
       }`}
       onClick={() => onSelect(post)}
     >
@@ -608,28 +981,27 @@ function PostCard({
           <div className="relative w-24 h-24 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
             {post.image ? (
               <img
-      src={post.image}
-      alt={post.title}
-      className="w-full h-full object-cover"
-      onError={(e) => {
-        console.error("❌ Erro ao carregar imagem:", {
-          postId: post.id,
-          imageUrl: post.image,
-        });
-        // Esconder imagem quebrada e mostrar placeholder
-        e.currentTarget.style.display = "none";
-        const parent = e.currentTarget.parentElement;
-        if (parent) {
-          parent.innerHTML = `
-            <div class="w-full h-full flex items-center justify-center">
-              <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-              </svg>
-            </div>
-          `;
-        }
-      }}
-    />
+                src={post.image}
+                alt={post.title}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  console.error("❌ Erro ao carregar imagem:", {
+                    postId: post.id,
+                    imageUrl: post.image,
+                  });
+                  e.currentTarget.style.display = "none";
+                  const parent = e.currentTarget.parentElement;
+                  if (parent) {
+                    parent.innerHTML = `
+                      <div class="w-full h-full flex items-center justify-center">
+                        <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                      </div>
+                    `;
+                  }
+                }}
+              />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
                 <ImageIcon className="w-8 h-8 text-gray-400" />
@@ -651,7 +1023,7 @@ function PostCard({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-8 px-2 gap-1 text-green-600 hover:text-green-700 hover:bg-green-50"
+                  className="h-8 px-2 gap-1 text-purple-600 hover:text-purple-700 hover:bg-purple-50"
                   onClick={(e) => {
                     e.stopPropagation();
                     onPublish(post);
@@ -700,7 +1072,7 @@ function PostCard({
                             "Tens a certeza que queres eliminar este post? Esta ação não pode ser revertida."
                           )
                         ) {
-                          onDelete(post.id); // ✅ Chamar função de delete
+                          onDelete(post.id);
                         }
                       }}
                     >
@@ -840,18 +1212,50 @@ function CalendarView({
     return days;
   };
 
+  // 🆕 CORRIGIDO - Usar scheduledAt corretamente
   const getPostsForDay = (date: Date) => {
     return posts.filter((post) => {
+      // Se não tiver scheduledAt nem date, ignorar
       if (!post.scheduledAt && !post.date) return false;
-      const postDate = post.scheduledAt
-        ? new Date(post.scheduledAt)
-        : new Date(post.date);
+
+      // Parsear a data do post
+      let postDate: Date;
+      if (post.scheduledAt) {
+        postDate = new Date(post.scheduledAt);
+      } else if (post.date) {
+        // Se tiver date mas não scheduledAt, tentar parsear
+        postDate = new Date(post.date);
+      } else {
+        return false;
+      }
+
+      // Comparar apenas ano, mês e dia (ignorar horas)
+      const postDay = postDate.getDate();
+      const postMonth = postDate.getMonth();
+      const postYear = postDate.getFullYear();
+
+      const targetDay = date.getDate();
+      const targetMonth = date.getMonth();
+      const targetYear = date.getFullYear();
+
       return (
-        postDate.getDate() === date.getDate() &&
-        postDate.getMonth() === date.getMonth() &&
-        postDate.getFullYear() === date.getFullYear()
+        postDay === targetDay &&
+        postMonth === targetMonth &&
+        postYear === targetYear
       );
     });
+  };
+
+  // 🆕 HELPER para formatar horário
+  const formatTime = (post: Post) => {
+    if (post.time) return post.time;
+    if (post.scheduledAt) {
+      const date = new Date(post.scheduledAt);
+      return `${String(date.getHours()).padStart(2, "0")}:${String(
+        date.getMinutes()
+      ).padStart(2, "0")}`;
+    }
+    return "--:--";
   };
 
   const days = getDaysInMonth();
@@ -862,6 +1266,20 @@ function CalendarView({
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const selectedDayPosts = selectedDate ? getPostsForDay(selectedDate) : [];
+
+  // 🆕 DEBUG - Ver quantos posts estão agendados
+  console.log("📅 Posts no calendário:", {
+    totalPosts: posts.length,
+    postsWithSchedule: posts.filter((p) => p.scheduledAt || p.date).length,
+    scheduledDates: posts
+      .filter((p) => p.scheduledAt || p.date)
+      .map((p) => ({
+        id: p.id,
+        scheduledAt: p.scheduledAt,
+        date: p.date,
+        title: p.title,
+      })),
+  });
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -929,9 +1347,9 @@ function CalendarView({
                             ? "border-blue-500 bg-blue-50"
                             : "border-gray-200"
                         }
-                        ${isSelected ? "ring-2 ring-blue-500" : ""}
+                        ${isSelected ? "ring-2 ring-purple-500" : ""}
                         ${isPast && day.isCurrentMonth ? "opacity-60" : ""}
-                        hover:border-blue-300 hover:shadow-md
+                        hover:border-purple-300 hover:shadow-md
                       `}
                     >
                       <div className="flex items-center justify-between mb-1">
@@ -958,13 +1376,13 @@ function CalendarView({
                             key={idx}
                             className={`text-xs p-1 rounded truncate ${
                               post.status === "SCHEDULED"
-                                ? "bg-blue-100 text-blue-700"
+                                ? "bg-purple-100 text-purple-700"
                                 : post.status === "PUBLISHED"
                                 ? "bg-green-100 text-green-700"
                                 : "bg-gray-100 text-gray-700"
                             }`}
                           >
-                            {post.time} •{" "}
+                            {formatTime(post)} •{" "}
                             {post.platform === "instagram" ? "📸" : "💙"}
                           </div>
                         ))}
@@ -1054,7 +1472,7 @@ function CalendarView({
                                 {post.status === "DRAFT" && "📝"}
                               </Badge>
                               <span className="text-xs text-gray-500">
-                                {post.time}
+                                {formatTime(post)}
                               </span>
                             </div>
                             <h4 className="font-semibold text-sm line-clamp-1">

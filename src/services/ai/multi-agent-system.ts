@@ -4,6 +4,7 @@ import { imageGenerationService } from "@/services/media/image-generation.servic
 import { imageStorageService } from "@/services/media/image-storage.service";
 import { heygenVideoService } from "@/services/media/heygen-video.service";
 import { runwayVideoService } from "@/services/media/runway-video.service";
+import { lumaVideoService } from "@/services/media/luma-video.service";
 
 // Import condicional do video service antigo para evitar erros se não existir
 let videoGenerationService: any;
@@ -24,7 +25,7 @@ interface OnboardingData {
   objective: string;
   platforms: string[];
   tone: string;
-  autoPosting: string;
+  // autoPosting: string;
   audience?: string;
   audienceDetails?: any;
 }
@@ -57,7 +58,7 @@ ${
 Objetivo: ${data.objective}
 Plataformas: ${data.platforms.join(", ")}
 Tom de voz: ${data.tone}
-Modo de publicação: ${data.autoPosting}
+
 
 Retorna JSON com:
 {
@@ -193,6 +194,10 @@ IMPORTANTE - PORTUGUÊS DE PORTUGAL:
       );
       console.log("🔥 Viral:", visualPrompts.viral.substring(0, 100) + "...");
       console.log("💰 Sales:", visualPrompts.sales.substring(0, 100) + "...");
+      console.log(
+        "🎬 Sales (vídeo):",
+        visualPrompts.salesVideo.substring(0, 100) + "..."
+      );
     } catch (error) {
       console.warn(
         "⚠️ Visual Prompt Agent não disponível, usando prompts genéricos"
@@ -207,6 +212,9 @@ IMPORTANTE - PORTUGUÊS DE PORTUGAL:
         sales: `Premium showcase of ${
           data.niche.split(" - ")[0]
         }, professional setup, studio lighting, aspirational aesthetic`,
+        salesVideo: `Vertical video showing ${
+          data.niche.split(" - ")[0]
+        } in action, smooth camera movement, professional videography, 9:16 format, cinematic quality`,
       };
     }
 
@@ -330,6 +338,9 @@ IMPORTANTE: Gera SEMPRE 3 posts completos. Se não gerar os 3, refaz.`;
       result.posts[2].imagePrompt = visualPrompts.sales;
 
       console.log("\n✅ Prompts visuais profissionais injetados nos posts!");
+      console.log("📸 Post 1 (educational): imagem");
+      console.log("📸 Post 2 (viral): imagem");
+      console.log("🎬 Post 3 (sales): vídeo");
     }
 
     // 🆕 VALIDAÇÃO E DEBUG MELHORADO
@@ -372,6 +383,7 @@ IMPORTANTE: Gera SEMPRE 3 posts completos. Se não gerar os 3, refaz.`;
       timestamp: new Date(),
     };
   }
+
   async generateContentIdeas(
     data: OnboardingData,
     count: number = 10
@@ -423,6 +435,7 @@ JSON:
     };
   }
 }
+
 // ==========================
 // 3. ANALYSIS AGENT
 // ==========================
@@ -497,12 +510,11 @@ Optimizas quando publicar baseado em audiência, algoritmo e comportamento.`;
       creative_assist: 3,
       strategy_only: 0,
     };
-    const postsPerWeek = frequencyMap[data.autoPosting] || 3;
+    const postsPerWeek = 3;
 
     const prompt = `Cria um calendário semanal detalhado em formato JSON:
 
 Frequência: ${postsPerWeek} posts/semana
-Modo: ${data.autoPosting}
 Plataformas: ${data.platforms.join(", ")}
 Melhores horários: ${strategy.postingSchedule.bestTimes.join(", ")}
 Ideias disponíveis: ${contentIdeas.ideas.length}
@@ -566,10 +578,18 @@ class VisualAgent {
       niche: string;
       audience?: string;
       tone: string;
-    }
+    },
+    onProgress?: (event: any) => void // 🆕 ADICIONAR callback
   ): Promise<AgentResponse<any>> {
     console.log(`🎨 Visual Agent a gerar media para ${posts.length} posts...`);
-    console.log("📋 Mix: 2 Imagens (FLUX) + 1 Reel (Runway)");
+    console.log("📋 Mix: 2 Imagens (FLUX) + 1 Reel (Luma)");
+
+    // 🆕 Helper para emitir progresso
+    const emitProgress = (data: any) => {
+      if (onProgress) {
+        onProgress(data);
+      }
+    };
 
     await imageStorageService.ensureBucketExists();
     console.log("✅ Storage configurado e pronto");
@@ -595,15 +615,41 @@ class VisualAgent {
           `\n🎬 Gerando media ${i + 1}/${posts.length}: ${post.mediaType}`
         );
 
-        // 🎬 VÍDEO COM RUNWAY
-        if (post.mediaType === "reel" || post.type === "sales") {
-          console.log("🎥 Gerando REEL com Runway Gen-3 Turbo...");
+        // 🆕 Emitir progresso do post
+        const postTypeLabels: any = {
+          educational: "educativo",
+          viral: "viral",
+          sales: "de vendas",
+        };
 
-          if (runwayVideoService.isConfigured()) {
+        emitProgress({
+          type: "post",
+          index: i + 1,
+          total: posts.length,
+          postType: post.type,
+          mediaType: post.mediaType,
+          title: `Post ${i + 1} ${postTypeLabels[post.type] || post.type}`,
+          subtitle:
+            post.mediaType === "reel"
+              ? "A gerar vídeo..."
+              : "A gerar imagem...",
+          progress: 40 + i * 20, // 40%, 60%, 80%
+        });
+
+        // 🎬 VÍDEO COM LUMA
+        if (post.mediaType === "reel" || post.type === "sales") {
+          console.log("🎥 Gerando REEL com Luma Dream Machine...");
+
+          if (lumaVideoService.isConfigured()) {
             try {
-              const video = await runwayVideoService.generateReelVideo({
-                script: post.videoScript || post.caption,
-                duration: 10,
+              const videoPrompt =
+                post.imagePrompt || post.videoScript || post.caption;
+
+              console.log(`📝 Prompt: "${videoPrompt.substring(0, 120)}..."`);
+
+              const video = await lumaVideoService.generateReelVideo({
+                script: videoPrompt,
+                  duration: '5s',
                 context: businessContext,
               });
 
@@ -613,40 +659,36 @@ class VisualAgent {
                 videoUrl: video.videoUrl,
                 thumbnailUrl: video.thumbnailUrl,
                 duration: video.duration,
-                videoScript: post.videoScript,
-                hasText: false,
-                generatedWith: "runway",
+                generatedWith: "luma",
                 cost: video.cost,
               });
 
               console.log(`✅ Reel gerado: ${video.videoUrl}`);
               console.log(`💰 Custo: $${video.cost.toFixed(2)}`);
-            } catch (runwayError: any) {
-              console.error("❌ Runway falhou:", runwayError.message);
 
-              // Placeholder
+              // 🆕 Emitir sucesso
+              emitProgress({
+                type: "post_complete",
+                index: i + 1,
+                total: posts.length,
+                mediaType: "video",
+                progress: 40 + (i + 1) * 20,
+              });
+            } catch (error: any) {
+              console.error("❌ Luma falhou:", error.message);
+
               mediaGenerated.push({
                 postType: post.type,
                 mediaType: "video",
                 videoUrl: "https://www.w3schools.com/html/mov_bbb.mp4",
                 thumbnailUrl: "https://via.placeholder.com/1080x1920",
-                duration: 10,
+                duration: 5,
                 error: true,
               });
             }
-          } else {
-            console.warn("⚠️ Runway não configurado, usando placeholder");
-            mediaGenerated.push({
-              postType: post.type,
-              mediaType: "video",
-              videoUrl: "https://www.w3schools.com/html/mov_bbb.mp4",
-              thumbnailUrl: "https://via.placeholder.com/1080x1920",
-              duration: 10,
-              error: true,
-            });
           }
         }
-        // 🖼️ IMAGEM COM FLUX (O QUE ESTAVA A FALTAR!)
+        // 🖼️ IMAGEM COM FLUX
         else {
           console.log("🖼️ Gerando IMAGEM com FLUX Pro Ultra...");
 
@@ -668,6 +710,15 @@ class VisualAgent {
             );
 
             console.log(`✅ Imagem ${i + 1} guardada: ${saved.publicUrl}`);
+
+            // 🆕 Emitir sucesso
+            emitProgress({
+              type: "post_complete",
+              index: i + 1,
+              total: posts.length,
+              mediaType: "image",
+              progress: 40 + (i + 1) * 20,
+            });
 
             mediaGenerated.push({
               postType: post.type,
@@ -892,18 +943,52 @@ export class AIOrchestrator {
     this.visualAgent = new VisualAgent();
   }
 
-  async processOnboarding(data: OnboardingData, userId: string) {
+  async processOnboarding(
+    data: OnboardingData,
+    userId: string,
+    onProgress?: (event: any) => void // 🆕 ADICIONAR callback
+  ) {
     console.log("🤖 Multi-Agent System PREMIUM iniciado...");
     console.log(
       "👥 Agentes: Strategy, Content PREMIUM, Visual, Analysis, Scheduling"
     );
 
+    // 🆕 Helper para emitir progresso
+    const emitProgress = (type: string, eventData: any) => {
+      if (onProgress) {
+        onProgress({ type, ...eventData, timestamp: new Date() });
+      }
+    };
+
+    // 🆕 Emitir início
+    emitProgress("stage", {
+      stage: "business_analysis",
+      title: "Analisando o teu negócio",
+      subtitle: "A processar informações...",
+      progress: 5,
+    });
+
     // Fase 1: Strategy Agent
     console.log("📊 Strategy Agent a trabalhar...");
-    const strategy = await this.strategyAgent.createStrategy(data);
+    emitProgress("stage", {
+      stage: "strategy",
+      title: "Criando estratégia de conteúdo",
+      subtitle: "Pilares, formatos e calendário...",
+      progress: 20,
+    });
 
-    // Fase 2: Content Agent PREMIUM (gera 2 posts com imagem + 1 reel)
+    const strategy = await this.strategyAgent.createStrategy(data);
+    console.log("✅ Estratégia criada!");
+
+    // Fase 2: Content Agent PREMIUM
     console.log("✍️ Content Agent PREMIUM a gerar 3 posts...");
+    emitProgress("stage", {
+      stage: "content_generation",
+      title: "Gerando posts profissionais",
+      subtitle: "A criar captions virais...",
+      progress: 30,
+    });
+
     const [initialPosts, contentIdeas] = await Promise.all([
       this.contentAgent.generateInitialPosts(data, strategy.result),
       this.contentAgent.generateContentIdeas(data, 10),
@@ -917,6 +1002,13 @@ export class AIOrchestrator {
 
     // Fase 3: Visual Agent - GERA 2 IMAGENS + 1 VÍDEO
     console.log("🎨🎬 Visual Agent a criar 2 imagens + 1 reel...");
+    emitProgress("stage", {
+      stage: "visual_generation",
+      title: "Criando media profissional",
+      subtitle: "2 imagens + 1 vídeo...",
+      progress: 40,
+    });
+
     const visualContent = await this.visualAgent.generateMediaForPosts(
       initialPosts.result.posts,
       userId,
@@ -924,7 +1016,8 @@ export class AIOrchestrator {
         niche: data.niche,
         audience: data.audience,
         tone: data.tone,
-      }
+      },
+      onProgress // 🆕 PASSAR callback para Visual Agent
     );
 
     // Combinar posts com media gerada
@@ -962,17 +1055,39 @@ export class AIOrchestrator {
 
     // Fase 4: Analysis Agent
     console.log("\n🔍 Analysis Agent a analisar...");
+    emitProgress("stage", {
+      stage: "analysis",
+      title: "Analisando perfil ideal",
+      subtitle: "Otimizações e insights...",
+      progress: 85,
+    });
+
     const profileAnalysis = await this.analysisAgent.analyzePerfectProfile(
       data
     );
 
     // Fase 5: Scheduling Agent
     console.log("📅 Scheduling Agent a criar calendário...");
+    emitProgress("stage", {
+      stage: "calendar",
+      title: "Criando calendário semanal",
+      subtitle: "A organizar publicações...",
+      progress: 92,
+    });
+
     const calendar = await this.schedulingAgent.createWeeklyCalendar(
       data,
       strategy.result,
       contentIdeas.result
     );
+
+    // Final
+    emitProgress("stage", {
+      stage: "finalizing",
+      title: "Finalizando estratégia",
+      subtitle: "Tudo pronto!",
+      progress: 98,
+    });
 
     const totalTokens =
       strategy.tokensUsed +
@@ -985,7 +1100,7 @@ export class AIOrchestrator {
     console.log("\n✅ Multi-Agent System PREMIUM concluído!");
     console.log(`💰 Tokens totais: ${totalTokens}`);
     console.log(`📸 2 Imagens geradas e guardadas`);
-    console.log(`🎬 1 Reel gerado com HeyGen`);
+    console.log(`🎬 1 Reel gerado com Luma`);
     console.log(`📝 ${postsWithMedia.length} Posts com captions completas`);
 
     return {

@@ -247,7 +247,6 @@ model OnboardingResponse {
   audienceDetails       String  // JSON {age, gender, location}
   objective             String
   instagram             String?
-  workMode              String
   
   // Instagram Analysis Report
   instagramReport       String? // JSON do relatório completo

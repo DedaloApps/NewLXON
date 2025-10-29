@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useSession } from "next-auth/react";
 import { HeaderPremium } from "@/components/layout/Header";
+import { GeneratePostModal } from "@/components/content/GeneratePostModal";
+import { useGeneratePost } from "@/hooks/useGeneratePost";
 import {
   Sparkles,
   Target,
@@ -50,6 +52,20 @@ export default function DashboardPage() {
   const { data: session } = useSession();
   const [videoModalOpen, setVideoModalOpen] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
+  
+  // 🆕 STATES PARA GERAÇÃO DE POSTS
+  const [generateModalOpen, setGenerateModalOpen] = useState(false);
+  const [selectedIdea, setSelectedIdea] = useState<any>(null);
+
+  // 🆕 HOOK DE GERAÇÃO COM RESET
+  const { reset } = useGeneratePost();
+
+  // 🔥 SOLUÇÃO: Reset automático quando modal abre
+  useEffect(() => {
+    if (generateModalOpen) {
+      reset(); // Limpa o post anterior SEMPRE que o modal abre
+    }
+  }, [generateModalOpen, reset]);
 
   const handleDownloadPDF = async () => {
     try {
@@ -169,6 +185,13 @@ export default function DashboardPage() {
     objective: data.objective,
   };
 
+  // 🆕 BUSINESS CONTEXT PARA GERAÇÃO DE POSTS
+  const businessContext = {
+    niche: data.businessDescription || businessInfo.business,
+    audience: data.audience || businessInfo.audience,
+    tone: data.tone || "professional",
+  };
+
   const platforms = ["Instagram"];
   const instagramReport = data.instagramReport;
 
@@ -284,7 +307,7 @@ export default function DashboardPage() {
         {/* Instagram Report */}
         {instagramReport && (
           <Card className="mb-8 overflow-hidden border-indigo-200 shadow-xl shadow-indigo-500/10 p-0">
-  <div className="bg-gradient-to-r from-indigo-600 to-violet-600 px-6 py-5">
+            <div className="bg-gradient-to-r from-indigo-600 to-violet-600 px-6 py-5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm">
@@ -1053,8 +1076,12 @@ export default function DashboardPage() {
                       size="sm"
                       variant="outline"
                       className="h-7 text-xs border-indigo-200 hover:bg-indigo-50"
+                      onClick={() => {
+                        setSelectedIdea(idea);
+                        setGenerateModalOpen(true);
+                      }}
                     >
-                      Gerar
+                      Gerar Agora
                     </Button>
                   </div>
                 </Card>
@@ -1148,6 +1175,14 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+
+      {/* 🆕 MODAL DE GERAÇÃO DE POST COM RESET AUTOMÁTICO */}
+      <GeneratePostModal
+        open={generateModalOpen}
+        onOpenChange={setGenerateModalOpen}
+        idea={selectedIdea}
+        businessContext={businessContext}
+      />
     </div>
   );
 }

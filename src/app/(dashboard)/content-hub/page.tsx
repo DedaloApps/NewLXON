@@ -58,6 +58,7 @@ import {
   ArrowLeft,
   Save,
   ChevronDown,
+  Upload,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
@@ -69,6 +70,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
+import { CreatePostModal } from "@/components/content/CreatePostModal";
 
 interface Post {
   id: string;
@@ -449,7 +451,15 @@ export default function ContentHubPage() {
   const [publishModalOpen, setPublishModalOpen] = useState(false);
   const [postToPublish, setPostToPublish] = useState<Post | null>(null);
 
-  // Estados para criar post
+  // 🆕 Estados para modal de criação com UPLOAD
+  const [createWithUploadModalOpen, setCreateWithUploadModalOpen] = useState(false);
+  const [businessContext, setBusinessContext] = useState({
+    niche: "",
+    audience: "",
+    tone: "professional"
+  });
+
+  // Estados para criar post com IA (sem upload)
   const [creating, setCreating] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [postType, setPostType] = useState("educational");
@@ -462,7 +472,24 @@ export default function ContentHubPage() {
 
   useEffect(() => {
     loadPosts();
+    loadBusinessContext();
   }, []);
+
+  const loadBusinessContext = async () => {
+    try {
+      const response = await axios.get("/api/onboarding/process");
+      if (response.data.hasOnboarding) {
+        const data = response.data.data;
+        setBusinessContext({
+          niche: data.businessDescription || data.business,
+          audience: data.audience || "",
+          tone: data.tone || "professional",
+        });
+      }
+    } catch (error) {
+      console.error("Erro ao carregar contexto:", error);
+    }
+  };
 
   const loadPosts = async () => {
     setLoading(true);
@@ -519,7 +546,7 @@ export default function ContentHubPage() {
         topic: topic.trim(),
         customPrompt: customPrompt.trim() || undefined,
         businessContext: {
-          niche: "Automaticamente detetado do onboarding",
+          niche: businessContext.niche || "Automaticamente detetado do onboarding",
         },
       });
 
@@ -644,9 +671,6 @@ export default function ContentHubPage() {
       }`,
     });
 
-    // Aqui podes fazer a chamada à API para publicar
-    // await axios.post(`/api/posts/${postToPublish?.id}/publish`, publishData);
-
     setPublishModalOpen(false);
     setPostToPublish(null);
   };
@@ -677,6 +701,17 @@ export default function ContentHubPage() {
         }}
         post={postToPublish}
         onPublish={handlePublishConfirm}
+      />
+
+      {/* 🆕 MODAL DE UPLOAD DE IMAGEM */}
+      <CreatePostModal
+        open={createWithUploadModalOpen}
+        onOpenChange={setCreateWithUploadModalOpen}
+        businessContext={businessContext}
+        onPostCreated={() => {
+          loadPosts();
+          setCreateWithUploadModalOpen(false);
+        }}
       />
 
       <HeaderPremium
@@ -752,118 +787,155 @@ export default function ContentHubPage() {
                 )}
               </Button>
 
-              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogTrigger asChild>
+              {/* 🆕 DROPDOWN COM 2 OPÇÕES */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
                   <Button className="gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
                     <Plus className="w-4 h-4" />
                     Criar Post
+                    <ChevronDown className="w-4 h-4" />
                   </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-2xl">
-                  <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                      <Sparkles className="w-5 h-5 text-purple-600" />
-                      Criar Novo Post com IA
-                    </DialogTitle>
-                    <DialogDescription>
-                      A IA vai criar um post completo com imagem e texto
-                      otimizado
-                    </DialogDescription>
-                  </DialogHeader>
-
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">
-                        Tipo de Post
-                      </label>
-                      <Select value={postType} onValueChange={setPostType}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="educational">
-                            📚 Educativo - Ensina algo valioso
-                          </SelectItem>
-                          <SelectItem value="viral">
-                            🔥 Viral - Entretenimento/Relatable
-                          </SelectItem>
-                          <SelectItem value="sales">
-                            💰 Vendas - Converte em clientes
-                          </SelectItem>
-                          <SelectItem value="engagement">
-                            💬 Engagement - Gera conversa
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-64">
+                  <DropdownMenuItem
+                    onClick={() => setCreateWithUploadModalOpen(true)}
+                    className="cursor-pointer p-3"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 bg-indigo-100 rounded-lg">
+                        <Upload className="w-4 h-4 text-indigo-600" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-semibold text-sm">Com a Minha Imagem</p>
+                        <p className="text-xs text-gray-600">
+                          Faz upload e a IA cria a caption
+                        </p>
+                      </div>
                     </div>
+                  </DropdownMenuItem>
 
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">
-                        Sobre o que queres criar?
-                      </label>
-                      <Input
-                        placeholder="Ex: Como aumentar produtividade..."
-                        value={topic}
-                        onChange={(e) => setTopic(e.target.value)}
-                      />
+                  <DropdownMenuItem
+                    onClick={() => setIsDialogOpen(true)}
+                    className="cursor-pointer p-3"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 bg-violet-100 rounded-lg">
+                        <Sparkles className="w-4 h-4 text-violet-600" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-semibold text-sm">Gerado por IA</p>
+                        <p className="text-xs text-gray-600">
+                          IA cria imagem + caption completa
+                        </p>
+                      </div>
                     </div>
-
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">
-                        Instruções adicionais (opcional)
-                      </label>
-                      <Textarea
-                        placeholder="Ex: Foca em empreendedores, usa tom casual..."
-                        value={customPrompt}
-                        onChange={(e) => setCustomPrompt(e.target.value)}
-                        rows={3}
-                      />
-                    </div>
-
-                    <div className="bg-blue-50 p-4 rounded-lg text-sm text-blue-900">
-                      <p className="font-semibold mb-1">A IA vai criar:</p>
-                      <ul className="space-y-1 ml-4">
-                        <li>✓ Hook impactante</li>
-                        <li>✓ Caption completa com storytelling</li>
-                        <li>✓ Hashtags estratégicas</li>
-                        <li>✓ Call-to-action otimizado</li>
-                        <li>✓ Imagem gerada por IA</li>
-                      </ul>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-3">
-                    <Button
-                      variant="outline"
-                      onClick={() => setIsDialogOpen(false)}
-                      className="flex-1"
-                    >
-                      Cancelar
-                    </Button>
-                    <Button
-                      onClick={handleCreatePost}
-                      disabled={creating || !topic.trim()}
-                      className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-                    >
-                      {creating ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />A
-                          criar...
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="w-4 h-4 mr-2" />
-                          Criar Post
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Modal de Criação com IA (sem upload) */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-purple-600" />
+              Criar Novo Post com IA
+            </DialogTitle>
+            <DialogDescription>
+              A IA vai criar um post completo com imagem e texto otimizado
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Tipo de Post</label>
+              <Select value={postType} onValueChange={setPostType}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="educational">
+                    📚 Educativo - Ensina algo valioso
+                  </SelectItem>
+                  <SelectItem value="viral">
+                    🔥 Viral - Entretenimento/Relatable
+                  </SelectItem>
+                  <SelectItem value="sales">
+                    💰 Vendas - Converte em clientes
+                  </SelectItem>
+                  <SelectItem value="engagement">
+                    💬 Engagement - Gera conversa
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                Sobre o que queres criar?
+              </label>
+              <Input
+                placeholder="Ex: Como aumentar produtividade..."
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                Instruções adicionais (opcional)
+              </label>
+              <Textarea
+                placeholder="Ex: Foca em empreendedores, usa tom casual..."
+                value={customPrompt}
+                onChange={(e) => setCustomPrompt(e.target.value)}
+                rows={3}
+              />
+            </div>
+
+            <div className="bg-blue-50 p-4 rounded-lg text-sm text-blue-900">
+              <p className="font-semibold mb-1">A IA vai criar:</p>
+              <ul className="space-y-1 ml-4">
+                <li>✓ Hook impactante</li>
+                <li>✓ Caption completa com storytelling</li>
+                <li>✓ Hashtags estratégicas</li>
+                <li>✓ Call-to-action otimizado</li>
+                <li>✓ Imagem gerada por IA</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setIsDialogOpen(false)}
+              className="flex-1"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleCreatePost}
+              disabled={creating || !topic.trim()}
+              className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+            >
+              {creating ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />A criar...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Criar Post
+                </>
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {loading ? (
         <div className="flex items-center justify-center min-h-[400px]">
@@ -885,13 +957,22 @@ export default function ContentHubPage() {
                     <p className="text-gray-500 mb-6">
                       Começa a criar o teu primeiro post agora
                     </p>
-                    <Button
-                      onClick={() => setIsDialogOpen(true)}
-                      className="gap-2"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Criar Primeiro Post
-                    </Button>
+                    <div className="flex gap-3 justify-center">
+                      <Button
+                        onClick={() => setCreateWithUploadModalOpen(true)}
+                        className="gap-2 bg-gradient-to-r from-indigo-600 to-violet-600"
+                      >
+                        <Upload className="w-4 h-4" />
+                        Com Minha Imagem
+                      </Button>
+                      <Button
+                        onClick={() => setIsDialogOpen(true)}
+                        className="gap-2 bg-gradient-to-r from-purple-600 to-pink-600"
+                      >
+                        <Sparkles className="w-4 h-4" />
+                        Gerado por IA
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               ) : (
@@ -901,7 +982,7 @@ export default function ContentHubPage() {
                     post={post}
                     onSelect={setSelectedPost}
                     isSelected={selectedPost?.id === post.id}
-                    onPublish={openPublishModal} // 🆕 Abrir modal
+                    onPublish={openPublishModal}
                     onDelete={handleDeletePost}
                     editingPost={editingPost}
                     editedCaption={editedCaption}
@@ -942,7 +1023,7 @@ export default function ContentHubPage() {
   );
 }
 
-// Post Card (resto do código continua igual...)
+// Post Card (continua igual mas recebe onPublish)
 function PostCard({
   post,
   onSelect,
@@ -1069,7 +1150,7 @@ function PostCard({
                         e.stopPropagation();
                         if (
                           confirm(
-                            "Tens a certeza que queres eliminar este post? Esta ação não pode ser revertida."
+                            "Tens a certeza que queres eliminar este post?"
                           )
                         ) {
                           onDelete(post.id);
@@ -1157,7 +1238,7 @@ function PostCard({
   );
 }
 
-// 📅 CALENDAR VIEW
+// Calendar View (continua igual)
 function CalendarView({
   posts,
   onSelectPost,
@@ -1212,24 +1293,19 @@ function CalendarView({
     return days;
   };
 
-  // 🆕 CORRIGIDO - Usar scheduledAt corretamente
   const getPostsForDay = (date: Date) => {
     return posts.filter((post) => {
-      // Se não tiver scheduledAt nem date, ignorar
       if (!post.scheduledAt && !post.date) return false;
 
-      // Parsear a data do post
       let postDate: Date;
       if (post.scheduledAt) {
         postDate = new Date(post.scheduledAt);
       } else if (post.date) {
-        // Se tiver date mas não scheduledAt, tentar parsear
         postDate = new Date(post.date);
       } else {
         return false;
       }
 
-      // Comparar apenas ano, mês e dia (ignorar horas)
       const postDay = postDate.getDate();
       const postMonth = postDate.getMonth();
       const postYear = postDate.getFullYear();
@@ -1246,7 +1322,6 @@ function CalendarView({
     });
   };
 
-  // 🆕 HELPER para formatar horário
   const formatTime = (post: Post) => {
     if (post.time) return post.time;
     if (post.scheduledAt) {
@@ -1266,20 +1341,6 @@ function CalendarView({
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const selectedDayPosts = selectedDate ? getPostsForDay(selectedDate) : [];
-
-  // 🆕 DEBUG - Ver quantos posts estão agendados
-  console.log("📅 Posts no calendário:", {
-    totalPosts: posts.length,
-    postsWithSchedule: posts.filter((p) => p.scheduledAt || p.date).length,
-    scheduledDates: posts
-      .filter((p) => p.scheduledAt || p.date)
-      .map((p) => ({
-        id: p.id,
-        scheduledAt: p.scheduledAt,
-        date: p.date,
-        title: p.title,
-      })),
-  });
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -1519,7 +1580,7 @@ function CalendarView({
   );
 }
 
-// Multi-Platform Preview
+// Multi-Platform Preview (continua igual)
 function MultiPlatformPreview({
   post,
   platform,
@@ -1601,7 +1662,7 @@ function MultiPlatformPreview({
   );
 }
 
-// Instagram Preview
+// Instagram Preview (continua igual)
 function InstagramPreview({ post }: { post: Post }) {
   return (
     <div className="bg-white border rounded-xl overflow-hidden shadow-sm">

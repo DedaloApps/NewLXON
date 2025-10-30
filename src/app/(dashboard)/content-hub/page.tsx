@@ -59,6 +59,9 @@ import {
   Save,
   ChevronDown,
   Upload,
+  Video,
+  Play,
+  ExternalLink,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
@@ -85,6 +88,11 @@ interface Post {
   platform: string;
   hashtags: string[];
   scheduledAt?: string;
+  // 🆕 PROPRIEDADES DE VÍDEO
+  mediaType?: "image" | "video" | "carousel";
+  videoUrl?: string;
+  thumbnailUrl?: string;
+  duration?: number;
 }
 
 type Platform = "instagram" | "facebook" | "linkedin" | "twitter";
@@ -165,12 +173,27 @@ function PublishModal({
             {/* Preview do Post */}
             <div className="p-4 bg-gray-50 rounded-lg border">
               <div className="flex items-start gap-3">
-                {post.image && (
-                  <img
-                    src={post.image}
-                    alt={post.title}
-                    className="w-20 h-20 rounded-lg object-cover"
-                  />
+                {(post.image || post.thumbnailUrl || post.videoUrl) && (
+                  <div className="relative w-20 h-20 rounded-lg overflow-hidden bg-gray-200">
+                    {post.videoUrl ? (
+                      <>
+                        <img
+                          src={post.thumbnailUrl || post.image || ""}
+                          alt={post.title}
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                          <Play className="w-8 h-8 text-white fill-white" />
+                        </div>
+                      </>
+                    ) : (
+                      <img
+                        src={post.image || post.thumbnailUrl || ""}
+                        alt={post.title}
+                        className="w-full h-full object-cover"
+                      />
+                    )}
+                  </div>
                 )}
                 <div className="flex-1">
                   <h3 className="font-semibold text-gray-900 mb-1">
@@ -470,6 +493,10 @@ export default function ContentHubPage() {
   const [editingPost, setEditingPost] = useState<string | null>(null);
   const [editedCaption, setEditedCaption] = useState("");
 
+  // 🆕 MODAL DE VÍDEO
+  const [videoModalOpen, setVideoModalOpen] = useState(false);
+  const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
+
   useEffect(() => {
     loadPosts();
     loadBusinessContext();
@@ -507,6 +534,8 @@ export default function ContentHubPage() {
               id: post.id,
               title: post.title,
               hasImage: !!post.image,
+              hasVideo: !!post.videoUrl,
+              mediaType: post.mediaType,
               imageUrl: post.image?.substring(0, 100) + "...",
             });
           });
@@ -990,6 +1019,10 @@ export default function ContentHubPage() {
                     startEditing={startEditing}
                     saveEdit={saveEdit}
                     cancelEdit={cancelEdit}
+                    onVideoClick={(videoUrl) => {
+                      setSelectedVideo(videoUrl);
+                      setVideoModalOpen(true);
+                    }}
                   />
                 ))
               )}
@@ -1018,12 +1051,112 @@ export default function ContentHubPage() {
         </div>
       )}
 
+      {/* 🆕 MODAL DE VÍDEO */}
+      {videoModalOpen && selectedVideo && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm"
+          onClick={() => {
+            setVideoModalOpen(false);
+            setSelectedVideo(null);
+          }}
+        >
+          <div
+            className="relative w-full max-w-4xl mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => {
+                setVideoModalOpen(false);
+                setSelectedVideo(null);
+              }}
+              className="absolute -top-12 right-0 text-white hover:text-gray-300 transition-colors"
+            >
+              <div className="flex items-center gap-2 text-sm">
+                <span>Fechar</span>
+                <div className="w-8 h-8 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center hover:bg-white/20 transition-colors">
+                  ✕
+                </div>
+              </div>
+            </button>
+
+            <div className="bg-black rounded-lg overflow-hidden shadow-2xl">
+              <video
+                src={selectedVideo}
+                controls
+                autoPlay
+                className="w-full aspect-[9/16] max-h-[80vh] object-contain"
+                controlsList="nodownload"
+              >
+                O navegador não suporta vídeo.
+              </video>
+            </div>
+
+            <div className="mt-4 text-center">
+              <p className="text-white/80 text-sm">
+                💡 Dica: Download ou partilha disponíveis
+              </p>
+              <div className="flex justify-center gap-3 mt-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="bg-white/10 border-white/20 text-white hover:bg-white/20 rounded-full"
+                  onClick={() => window.open(selectedVideo, "_blank")}
+                >
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  Abrir em Nova Tab
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="bg-white/10 border-white/20 text-white hover:bg-white/20 rounded-full"
+                  onClick={async () => {
+                    try {
+                      const response = await fetch(selectedVideo);
+                      const blob = await response.blob();
+                      const url = window.URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = `reel-${Date.now()}.mp4`;
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                      window.URL.revokeObjectURL(url);
+                    } catch (error) {
+                      console.error("Erro ao fazer download:", error);
+                      window.open(selectedVideo, "_blank");
+                    }
+                  }}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Download
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Toaster />
     </div>
   );
 }
 
-// Post Card (continua igual mas recebe onPublish)
+// 🆕 POST CARD COM SUPORTE A VÍDEOS
+interface PostCardProps {
+  post: Post;
+  onSelect: (post: Post) => void;
+  isSelected: boolean;
+  onPublish: (post: Post) => void;
+  onDelete: (postId: string) => void;
+  editingPost: string | null;
+  editedCaption: string;
+  setEditedCaption: (caption: string) => void;
+  startEditing: (post: Post) => void;
+  saveEdit: (postId: string) => void;
+  cancelEdit: () => void;
+  onVideoClick: (videoUrl: string) => void;
+}
+
 function PostCard({
   post,
   onSelect,
@@ -1036,7 +1169,8 @@ function PostCard({
   startEditing,
   saveEdit,
   cancelEdit,
-}: any) {
+  onVideoClick,
+}: PostCardProps) {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "SCHEDULED":
@@ -1050,6 +1184,10 @@ function PostCard({
     }
   };
 
+  // 🆕 DETERMINAR SE É VÍDEO
+  const isVideo = post.mediaType === "video" || post.type === "VIDEO" || post.videoUrl;
+  const displayImage = post.thumbnailUrl || post.image;
+
   return (
     <Card
       className={`cursor-pointer transition-all hover:shadow-lg ${
@@ -1059,35 +1197,67 @@ function PostCard({
     >
       <CardContent className="p-4">
         <div className="flex gap-4">
-          <div className="relative w-24 h-24 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
-            {post.image ? (
-              <img
-                src={post.image}
-                alt={post.title}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  console.error("❌ Erro ao carregar imagem:", {
-                    postId: post.id,
-                    imageUrl: post.image,
-                  });
-                  e.currentTarget.style.display = "none";
-                  const parent = e.currentTarget.parentElement;
-                  if (parent) {
-                    parent.innerHTML = `
-                      <div class="w-full h-full flex items-center justify-center">
-                        <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                        </svg>
-                      </div>
-                    `;
-                  }
-                }}
-              />
+          {/* 🆕 THUMBNAIL COM INDICADOR DE VÍDEO */}
+          <div className="relative w-24 h-24 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 group">
+            {displayImage ? (
+              <>
+                <img
+                  src={displayImage}
+                  alt={post.title}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    console.error("❌ Erro ao carregar imagem:", {
+                      postId: post.id,
+                      imageUrl: displayImage,
+                    });
+                    e.currentTarget.style.display = "none";
+                    const parent = e.currentTarget.parentElement;
+                    if (parent) {
+                      parent.innerHTML = `
+                        <div class="w-full h-full flex items-center justify-center">
+                          <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                          </svg>
+                        </div>
+                      `;
+                    }
+                  }}
+                />
+                
+                {/* 🆕 OVERLAY DE VÍDEO */}
+                {isVideo && (
+                  <div 
+                    className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (post.videoUrl) {
+                        onVideoClick(post.videoUrl);
+                      }
+                    }}
+                  >
+                    <div className="bg-white/20 backdrop-blur-sm rounded-full p-3">
+                      <Play className="w-6 h-6 text-white fill-white" />
+                    </div>
+                  </div>
+                )}
+              </>
             ) : (
               <div className="w-full h-full flex items-center justify-center">
-                <ImageIcon className="w-8 h-8 text-gray-400" />
+                {isVideo ? (
+                  <Video className="w-8 h-8 text-gray-400" />
+                ) : (
+                  <ImageIcon className="w-8 h-8 text-gray-400" />
+                )}
               </div>
             )}
+            
+            {/* 🆕 BADGE DE VÍDEO */}
+            {isVideo && (
+              <Badge className="absolute bottom-1 right-1 text-xs bg-gradient-to-r from-indigo-600 to-violet-600 text-white border-0">
+                🎬 Reel
+              </Badge>
+            )}
+            
             {post.mediaUrls?.length > 1 && (
               <Badge className="absolute bottom-1 right-1 text-xs">
                 +{post.mediaUrls.length - 1}
@@ -1230,6 +1400,14 @@ function PostCard({
                 <Instagram className="w-3 h-3" />
                 Instagram
               </Badge>
+              
+              {/* 🆕 BADGE DE DURAÇÃO */}
+              {isVideo && post.duration && (
+                <Badge variant="outline" className="gap-1">
+                  <Video className="w-3 h-3" />
+                  {post.duration}s
+                </Badge>
+              )}
             </div>
           </div>
         </div>
@@ -1238,7 +1416,9 @@ function PostCard({
   );
 }
 
-// Calendar View (continua igual)
+// Calendar View, MultiPlatformPreview, InstagramPreview, FacebookPreview, LinkedInPreview, TwitterPreview
+// (Mantém tudo IGUAL ao ficheiro original - só copiei para ficar completo)
+
 function CalendarView({
   posts,
   onSelectPost,
@@ -1505,9 +1685,9 @@ function CalendarView({
                         className="p-3 border rounded-lg hover:border-blue-500 hover:shadow-md transition-all cursor-pointer"
                       >
                         <div className="flex items-start gap-3">
-                          {post.image ? (
+                          {(post.image || post.thumbnailUrl) ? (
                             <img
-                              src={post.image}
+                              src={post.thumbnailUrl || post.image}
                               alt={post.title}
                               className="w-16 h-16 rounded object-cover"
                             />
@@ -1580,7 +1760,6 @@ function CalendarView({
   );
 }
 
-// Multi-Platform Preview (continua igual)
 function MultiPlatformPreview({
   post,
   platform,
@@ -1662,8 +1841,10 @@ function MultiPlatformPreview({
   );
 }
 
-// Instagram Preview (continua igual)
 function InstagramPreview({ post }: { post: Post }) {
+  const displayImage = post.thumbnailUrl || post.image;
+  const isVideo = post.videoUrl || post.mediaType === "video";
+  
   return (
     <div className="bg-white border rounded-xl overflow-hidden shadow-sm">
       <div className="flex items-center gap-3 p-3 border-b">
@@ -1674,16 +1855,29 @@ function InstagramPreview({ post }: { post: Post }) {
         </div>
         <MoreVertical className="w-5 h-5 text-gray-600" />
       </div>
-      <div className="aspect-square bg-gray-100">
-        {post.image ? (
-          <img
-            src={post.image}
-            alt={post.title}
-            className="w-full h-full object-cover"
-          />
+      <div className="aspect-square bg-gray-100 relative">
+        {displayImage ? (
+          <>
+            <img
+              src={displayImage}
+              alt={post.title}
+              className="w-full h-full object-cover"
+            />
+            {isVideo && (
+              <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                <div className="bg-white/20 backdrop-blur-sm rounded-full p-4">
+                  <Play className="w-8 h-8 text-white fill-white" />
+                </div>
+              </div>
+            )}
+          </>
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <Instagram className="w-16 h-16 text-gray-400" />
+            {isVideo ? (
+              <Video className="w-16 h-16 text-gray-400" />
+            ) : (
+              <Instagram className="w-16 h-16 text-gray-400" />
+            )}
           </div>
         )}
       </div>
@@ -1716,7 +1910,6 @@ function InstagramPreview({ post }: { post: Post }) {
   );
 }
 
-// Facebook Preview
 function FacebookPreview({ post }: { post: Post }) {
   return (
     <div className="bg-white border rounded-xl overflow-hidden shadow-sm">
@@ -1736,10 +1929,10 @@ function FacebookPreview({ post }: { post: Post }) {
         </div>
         <div className="mt-3 text-sm">{post.caption || post.title}</div>
       </div>
-      {post.image && (
+      {(post.image || post.thumbnailUrl) && (
         <div className="aspect-video bg-gray-100">
           <img
-            src={post.image}
+            src={post.thumbnailUrl || post.image}
             alt={post.title}
             className="w-full h-full object-cover"
           />
@@ -1760,7 +1953,6 @@ function FacebookPreview({ post }: { post: Post }) {
   );
 }
 
-// LinkedIn Preview
 function LinkedInPreview({ post }: { post: Post }) {
   return (
     <div className="bg-white border rounded-xl overflow-hidden shadow-sm">
@@ -1781,10 +1973,10 @@ function LinkedInPreview({ post }: { post: Post }) {
         </div>
         <div className="text-sm mb-3">{post.caption || post.title}</div>
       </div>
-      {post.image && (
+      {(post.image || post.thumbnailUrl) && (
         <div className="aspect-video bg-gray-100">
           <img
-            src={post.image}
+            src={post.thumbnailUrl || post.image}
             alt={post.title}
             className="w-full h-full object-cover"
           />
@@ -1805,7 +1997,6 @@ function LinkedInPreview({ post }: { post: Post }) {
   );
 }
 
-// Twitter/X Preview
 function TwitterPreview({ post }: { post: Post }) {
   return (
     <div className="bg-white border rounded-xl overflow-hidden shadow-sm">
@@ -1824,9 +2015,9 @@ function TwitterPreview({ post }: { post: Post }) {
               </span>
             </div>
             <div className="text-sm mb-3">{post.caption || post.title}</div>
-            {post.image && (
+            {(post.image || post.thumbnailUrl) && (
               <div className="rounded-xl overflow-hidden border mb-3">
-                <img src={post.image} alt={post.title} className="w-full" />
+                <img src={post.thumbnailUrl || post.image} alt={post.title} className="w-full" />
               </div>
             )}
             <div className="flex items-center justify-around text-gray-500">

@@ -6,7 +6,7 @@ import { prisma } from "@/lib/db";
 // PATCH - Atualizar caption
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { postId: string } }
+  context: { params: Promise<{ postId: string }> }
 ) {
   try {
     const session = await getServerSession();
@@ -15,7 +15,7 @@ export async function PATCH(
     }
 
     const { caption } = await req.json();
-    const postId = params.postId;
+    const { postId } = await context.params; // ✅ Await aqui
 
     const post = await prisma.post.findUnique({
       where: { id: postId },
@@ -57,7 +57,7 @@ export async function PATCH(
 // DELETE - Eliminar post
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { postId: string } }
+  context: { params: Promise<{ postId: string }> }
 ) {
   try {
     const session = await getServerSession();
@@ -65,7 +65,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
     }
 
-    const postId = params.postId;
+    const { postId } = await context.params; // ✅ Await aqui
 
     const post = await prisma.post.findUnique({
       where: { id: postId },
